@@ -7,7 +7,7 @@ import requests
 
 from bs4 import BeautifulSoup
 
-from money_diaries_model import PageMetaData, OccupationData, ExpensesData
+from money_diaries_model import PageMetaData, OccupationData, ExpensesData, TimeEntry, Day
 
 
 class PageScrape:
@@ -49,6 +49,7 @@ class MoneyDiariesPageScrape(PageScrape):
         self.page_meta_data = None
         self.occupation_data = None
         self.expense_data = None
+        self.days_data = None
         PageScrape.__init__(self, url, use_selenium)
 
     def _set_meta_data(self):
@@ -101,3 +102,53 @@ class MoneyDiariesPageScrape(PageScrape):
 
         self.expense_data = ExpensesData(expenses)
 
+    def _set_days_data(self):
+        """ Get and set expense data of the article """
+        days = []
+
+        section_h3s = self.soup.select('div.section-container.section-text-container h3')
+        for section in section_h3s:
+            time_entries = []
+            daily_total = ''
+            parent = section.find_parent('div', class_='section-outer-container')
+            for sibling in parent.find_next_siblings('div', class_='section-outer-container'):
+                money_spent = None
+                if sibling.select('.section-text-container h3'):
+                    break # start a new day
+
+                time_section = sibling.find('div', class_='section-text')
+                if not time_section or len(time_section.contents) == 0:
+                    continue
+                money_spent_section = time_section.find('strong')
+
+                if money_spent_section and 'Daily Total' in str(money_spent_section):
+                    daily_total = re.findall(r'([\$\d\.]+)', str(money_spent_section))[0]
+                    continue
+                elif money_spent_section:
+                    money_spent = money_spent_section.contents[0]
+                    money_spent_section.decompose()
+
+                if len(time_section.contents) == 0:
+                    continue
+                    
+                matches = re.findall(r'([\d\:]*\s[ap]\.?m\.?)\s*—\s*(.*)', str(time_section.contents[0]))
+
+                if len(matches) == 0:
+                    continue
+
+                time_str = matches[0][0]
+                descr = matches[0][1]
+                if ":" in time_str:
+                    time_of_day = datetime.strptime(time_str.replace('.', ''), "%I:%M %p")
+                else:
+                    time_of_day = datetime.strptime(time_str.replace('.', ''), "%I %p")
+
+                time_entries.append(TimeEntry(
+                        time_of_day=time_of_day, 
+                        description=descr, 
+                        money_spent=money_spent
+                    ))
+            days.append(Day(title=str(section.contents[0]), total=daily_total, time_entries=time_entries))
+        self.days_data = days
+        
+        return

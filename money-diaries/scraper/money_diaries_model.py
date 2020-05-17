@@ -22,3 +22,17 @@ class ExpensesData:
     '''Class for keeping track of a expenses.'''
     expenses: [(str, str)]
 
+@dataclass
+class TimeEntry:
+    '''Class for keeping track of a day's time entry.'''
+    time_of_day: datetime
+    description: str
+    money_spent: str
+
+@dataclass
+class Day:
+    '''Class for keeping track of a day.'''
+    title: str
+    total: str
+    time_entries: TimeEntry
+

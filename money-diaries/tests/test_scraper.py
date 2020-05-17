@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-import datetime
+from datetime import datetime
 import os
 import sys
 
@@ -37,7 +37,7 @@ class MoneyDiariesPageScrapeTest(unittest.TestCase):
         scrape._set_meta_data()
         self.assertEqual(scrape.page_meta_data.title, 'A Week In Minneapolis, MN, On A $20,000 Income')
         self.assertEqual(scrape.page_meta_data.author, 'You')
-        self.assertEqual(scrape.page_meta_data.publish_date, datetime.datetime(2018, 12, 15, 12, 35))
+        self.assertEqual(scrape.page_meta_data.publish_date, datetime(2018, 12, 15, 12, 35))
 
     def test__set_occupation_data_sets_data(self):
         scrape = MoneyDiariesPageScrape('local.money-diaries')
@@ -65,6 +65,32 @@ class MoneyDiariesPageScrapeTest(unittest.TestCase):
             ('gas bill', '$26'),
             ('internet', '$20')
             ])
+
+    def test__set_days_data(self):
+        scrape = MoneyDiariesPageScrape('local.money-diaries')
+        with open('{}/tests/content/money-diaries-example.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            scrape.content = f.read()
+        scrape._get_page_soup()
+        scrape._set_days_data()
+        self.assertEqual(len(scrape.days_data), 7)
+
+        self.assertEqual(scrape.days_data[0].title, 'Day One')
+        self.assertEqual(scrape.days_data[0].total, '$72.70')
+        self.assertEqual(len(scrape.days_data[0].time_entries), 4)
+
+        day_0_time_entries = scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[0].description, "I usually find a breakfast I like and stick to for about a year. Right now it's yogurt, muesli, and a banana. While I don't love the politics of buying bananas (yeah, I'm that kind of annoying foodie), they are cheap, filling, and give me potassium. I vow to switch to adding sweet potatoes instead of bananas next week.")
+        self.assertEqual(day_0_time_entries[0].money_spent, None)
+        self.assertEqual(day_0_time_entries[0].time_of_day, datetime(year=1900, month=1, day=1, hour=8))
+
+        self.assertEqual(scrape.days_data[6].title, 'Day Seven')
+        self.assertEqual(scrape.days_data[6].total, '$79.60')
+        self.assertEqual(len(scrape.days_data[6].time_entries), 6)
+
+        day_0_time_entries = scrape.days_data[6].time_entries
+        self.assertEqual(day_0_time_entries[4].description, "Since Target is near a grocery store, I pop in and put $25 on my transit card and buy a pack of 20 stamps for $10. The stamps are all white Santas, but it's either that or American flags, so I'm going with festive hetero-patriarchy. I get home feeling ready to make cards and stretch my artistic skills to the limit. ")
+        self.assertEqual(day_0_time_entries[4].money_spent, "$35")
+        self.assertEqual(day_0_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=16, minute=15))
 
 
 if __name__ == '__main__':

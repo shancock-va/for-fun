@@ -6,6 +6,7 @@ import re
 import requests
 
 from bs4 import BeautifulSoup
+import lxml
 
 from money_diaries_model import PageMetaData, OccupationData, ExpensesData, TimeEntry, Day
 
@@ -29,11 +30,11 @@ class PageScrape:
             self.content = requests.get(self.url).content.decode("utf-8")
         return self.content
 
-    def _get_page_soup(self):
+    def _get_page_soup(self, parser='html.parser'):
         """ Returns beautiful soup representation of the page """
         if self.content is None:
             raise ValueError('Missing content, call _get_page_contents first')
-        self.soup = BeautifulSoup(self.content, 'html.parser')
+        self.soup = BeautifulSoup(self.content, parser)
         return self.soup 
 
     def scrape_page(self):
@@ -152,3 +153,30 @@ class MoneyDiariesPageScrape(PageScrape):
         self.days_data = days
         
         return
+
+
+class MoneyDiariesSiteMapScaper(PageScrape):
+    """ Scrape a Money Diaries page """
+    def __init__(self, url, use_selenium=False):
+        """ Initiate the class """
+        self.additional_site_map_urls = []
+        self.page_urls = []
+        PageScrape.__init__(self, url, use_selenium)
+
+    def _get_page_soup(self, parser='xml'):
+        """ Get the page soup for the site map """
+        return super()._get_page_soup(parser=parser)
+
+    def _set_site_map_urls(self):
+        """ Get and set expense data of the article """
+        self.additional_site_map_urls = [
+            sitemap.contents[0] for sitemap_section in self.soup.find_all('sitemap')
+                for sitemap in sitemap_section.find_all('loc')
+        ]
+
+    def _set_page_urls(self):
+        """ Get and set expense data of the article """
+        self.page_urls = [
+            loc.contents[0] for url_section in self.soup.find_all('url')
+                for loc in url_section.find_all('loc')
+        ]

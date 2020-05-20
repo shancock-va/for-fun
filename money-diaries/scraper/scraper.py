@@ -45,13 +45,22 @@ class PageScrape:
 
 class MoneyDiariesPageScrape(PageScrape):
     """ Scrape a Money Diaries page """
-    def __init__(self, url, use_selenium=False):
+    def __init__(self, url, selenium_driver=None):
         """ Initiate the class """
         self.page_meta_data = None
         self.occupation_data = None
         self.expense_data = None
         self.days_data = None
-        PageScrape.__init__(self, url, use_selenium)
+        PageScrape.__init__(self, url, selenium_driver)
+
+    def scrape_page(self):
+        """ Scrapes page and sets content and parse it using Beautiful Soup """
+        self._get_page_contents()
+        self._get_page_soup()
+        self._set_meta_data()
+        self._set_occupation_data()
+        self._set_expenses_data()
+        self._set_days_data()
 
     def _set_meta_data(self):
         """ Get and set title, author, and date published for article """
@@ -163,6 +172,13 @@ class MoneyDiariesSiteMapScaper(PageScrape):
         self.page_urls = []
         PageScrape.__init__(self, url, use_selenium)
 
+    def scrape_page(self):
+        """ Scrapes page and sets content and parse it using Beautiful Soup """
+        self._get_page_contents()
+        self._get_page_soup()
+        self._set_site_map_urls()
+        self._set_page_urls()
+
     def _get_page_soup(self, parser='xml'):
         """ Get the page soup for the site map """
         return super()._get_page_soup(parser=parser)
@@ -180,3 +196,7 @@ class MoneyDiariesSiteMapScaper(PageScrape):
             loc.contents[0] for url_section in self.soup.find_all('url')
                 for loc in url_section.find_all('loc')
         ]
+
+    def get_money_diary_page_urls(self):
+        """ Get and set expense data of the article """
+        return [url for url in self.page_urls if re.search(r'money-diar((?:y)|(?:ies))', url)]

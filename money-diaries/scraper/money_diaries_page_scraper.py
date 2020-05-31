@@ -33,14 +33,26 @@ class MoneyDiariesPageScraper(PageScraper):
         """ Get and set title, author, and date published for article """
         title = self.soup.find('h1').get_text()
         author = self.soup.find('span', class_='contributor').get_text()
+
+        self.page_meta_data = PageMetaData(title, author, self._get_modified_date())
+
+    
+    def _get_modified_date(self):
+        """ get modified date """
+        elements = self._get_react_data_groups()
+
+        for el in elements:
+            if 'datePublished' in el:
+                return datetime.strptime(el['datePublished'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        
         publish_date_container = self.soup.select('div.byline.modified a')
         publish_date_str = publish_date_container[0].get_text()
         try:
             publish_date = datetime.strptime(publish_date_str.replace('.',''), '%B %d, %Y, %I:%M %p')
         except ValueError:
             publish_date = datetime.strptime(publish_date_str.replace('.',''), '%d %B %Y, %H:%M')
-
-        self.page_meta_data = PageMetaData(title, author, publish_date)
+        
+        return publish_date
 
     def _set_occupation_data(self):
         """ Get and set occupation data of the article """
@@ -57,7 +69,9 @@ class MoneyDiariesPageScraper(PageScraper):
         extras = []
         
         for pair in pairs:
-            if pair[0] == 'Occupation':
+            if pair[0].lower() == 'monthly expenses':
+                break
+            elif pair[0] == 'Occupation':
                 occupation = pair[2].strip()
             elif pair[0] == 'Industry':
                 industry = pair[2].strip()
@@ -77,14 +91,19 @@ class MoneyDiariesPageScraper(PageScraper):
             monthly_expense_label_section = section.find('strong', string='Monthly Expenses')
             if monthly_expense_label_section:
                 siblings = monthly_expense_label_section.find_next_siblings()
-                if siblings:
+                if siblings and monthly_expense_label_section.previousSibling is None:
                     monthly_expense_label_section.decompose()
                     section_str = str(section)
                 else:
                     parent = monthly_expense_label_section.find_parent('div', class_='section-outer-container')
-                    sibling = parent.find_next_siblings('div', class_='section-outer-container')
-                    content = sibling[0].findChildren('div', class_='section-text')
-                    section_str = str(content[0])
+                    if parent.find('strong', string='Industry:'):
+                        # Expenses and Occupation data are not well separated
+                        contents = parent.findChildren('div', class_='section-text')[0].contents
+                        section_str = re.findall(r'\<strong\>Monthly Expenses\<\/strong\>(.*)', ''.join(map(str, contents)))[0]
+                    else:
+                        sibling = parent.find_next_siblings('div', class_='section-outer-container')
+                        content = sibling[0].findChildren('div', class_='section-text')
+                        section_str = str(content[0])
 
                 pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>\s?([$€£\d\,\.]*)?\s?(.*?)(?:<|\Z)', section_str)
                 break
@@ -103,15 +122,18 @@ class MoneyDiariesPageScraper(PageScraper):
             self.days_data = self._get_days_when_days_are_headers(day_sections)
         else:
             # Get days when day is just <strong></strong>
-            react_elements = self.soup.select('script[data-react-helmet="true"]')
+            react_elements = self._get_react_data_groups()
             day_sections = []
-            for element in react_elements:
-                days_content = json.loads(element.contents[0])
+            for days_content in react_elements:
                 if 'description' in days_content and days_content['description'].startswith("<strong>Day"):
                     day_sections.append(days_content['description'])
             self.days_data = self._get_days_when_days_are_strongs(day_sections)
 
         return
+
+    def _get_react_data_groups(self):
+        """ Gets react data from script tags returns an array of dicts """
+        return [json.loads(element.contents[0]) for element in self.soup.select('script[data-react-helmet="true"]')]
 
     def _get_days_when_days_are_strongs(self, day_sections):
         """ Get days data when we have days as strong elements """

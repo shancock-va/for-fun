@@ -20,7 +20,7 @@ class MoneyDiariesPageScraperTest(unittest.TestCase):
         self.scrape._set_meta_data()
         self.assertEqual(self.scrape.page_meta_data.title, 'A Week In Minneapolis, MN, On A $20,000 Income')
         self.assertEqual(self.scrape.page_meta_data.author, 'You')
-        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2018, 12, 15, 12, 35))
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2018, 12, 15, 18, 35))
 
     def test__set_occupation_data_sets_data(self):
         self.scrape._set_occupation_data()
@@ -64,7 +64,7 @@ class MoneyDiariesPageScraperTest(unittest.TestCase):
         self.assertEqual(day_0_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=16, minute=15))
 
 
-class MoneyDiariesGbScrapeTest(unittest.TestCase):
+class MoneyDiariesGbAnaesthetistScrapeTest(unittest.TestCase):
     def setUp(self):
         self.scrape = MoneyDiariesPageScraper('local.money-diaries')
         with open('{}/tests/content/money-diary-anaesthetist-coronavirus.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
@@ -75,7 +75,7 @@ class MoneyDiariesGbScrapeTest(unittest.TestCase):
         self.scrape._set_meta_data()
         self.assertEqual(self.scrape.page_meta_data.title, 'Money Diary: An ICU Doctor In Bristol On 60k')
         self.assertEqual(self.scrape.page_meta_data.author, 'Anonymous')
-        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 5, 20, 0, 0))
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 5, 20, 6, 0, 47))
 
     def test__set_occupation_data_sets_data(self):
         self.scrape._set_occupation_data()
@@ -125,6 +125,69 @@ class MoneyDiariesGbScrapeTest(unittest.TestCase):
         self.assertEqual(day_5_time_entries[4].description, 'Find a colouring book I got for my 30th birthday and spend some time doing that.')
         self.assertEqual(day_5_time_entries[4].money_spent, None)
         self.assertEqual(day_5_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=15, minute=30))
+
+
+class MoneyDiariesUsMarketingCoordinatorScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diaries-marketing-coordinator-phoenix-az-salary.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'A Week In Phoenix, AZ, On A $50,000 Salary')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Refinery29')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 4, 17, 15, 30, 47))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'Marketing Coordinator')
+        self.assertEqual(self.scrape.occupation_data.industry, 'Construction')
+        self.assertEqual(self.scrape.occupation_data.location, 'Phoenix, AZ')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '20', None), 
+            ('salary', '$50,000', '+ $2,000 sign-on bonus'),
+            ('net worth', '$10,000', '(Savings, HSA, 401(k))'),
+            ('debt', '$6,000', '(I bought a 1973 VW Bug, because fun car?)'),
+            ('paycheck amount (1x/week)', '$800', '(post-tax)'),
+            ('pronouns', None, 'She/her')
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('rent', '$550', 'for my half of a two bedroom two bathroom apartment I share with my fiancé)'), 
+                ('car loan', '$145', None), 
+                ('car insurance', '$50', None), 
+                ('horse boarding', '$715', '(I have two horses)'), 
+                ('internet', '$60', None), 
+                ('gym', '$25', None), 
+                ('electricity', None, 'Fiancé pays'), 
+                ('savings', '$600', '(Sometimes more depending on the month. I am slowly trying to save to buy a home and/or land within the next few years. My fiancé makes $35,000. We split finances right now, but I recently got a raise so we are looking to split costs according to our income %. We have about $8,000 in combined savings right now. I just started an HSA and 401(k) plan in March, so there is very little in those accounts.)')
+            ])
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '$0')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 7)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[3].description, "I find out I have a project due tomorrow and have a small panic attack. I calm down and am thankful for something to work on, especially because I've been having issues focusing during the pandemic. I coordinate with my manager to go over tasks for this project and hop on a conference call to ensure all my boxes are checked.")
+        self.assertEqual(day_0_time_entries[3].money_spent, None)
+        self.assertEqual(day_0_time_entries[3].time_of_day, datetime(year=1900, month=1, day=1, hour=12, minute=0))
+
+        self.assertEqual(self.scrape.days_data[3].title, 'Day Four')
+        self.assertEqual(self.scrape.days_data[3].total, '$320')
+        self.assertEqual(len(self.scrape.days_data[3].time_entries), 4)
+
+        day_3_time_entries = self.scrape.days_data[3].time_entries
+        self.assertEqual(day_3_time_entries[1].description, 'I get a much-anticipated call! I purchased a 1973 VW Beetle in September as a "fun car" to enjoy the sunny Arizona weather in. It\'s been in the shop for the last two weeks due to some clutch and pressure plate issues, and I just got a call that it\'s ready for pickup. The payment came in two parts, the first part already paid for was $1,200 and then the final cost for completion was $305. I pay over the phone with my credit card which earns cashback and will pay it off as soon as the bill processes. ')
+        self.assertEqual(day_3_time_entries[1].money_spent, '$305')
+        self.assertEqual(day_3_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=11, minute=0))
 
 
 if __name__ == '__main__':

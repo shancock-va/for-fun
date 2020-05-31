@@ -15,12 +15,12 @@ class OccupationData:
     occupation: str
     industry: str
     location: str
-    extras: [(str, str)]
+    extras: [(str, str, str)]
 
 @dataclass
 class ExpensesData:
     '''Class for keeping track of a expenses.'''
-    expenses: [(str, str)]
+    expenses: [(str, str, str)]
 
 @dataclass
 class TimeEntry:

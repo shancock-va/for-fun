@@ -3,6 +3,7 @@ Classes for scraping money diaries
 """
 
 from datetime import datetime
+import json
 import re
 
 from scraper import PageScraper
@@ -47,7 +48,7 @@ class MoneyDiariesPageScraper(PageScraper):
         pairs = None
         for section in section_texts:
             if section.find('strong', string='Occupation:') or section.find('strong', string='Industry: '):
-                pairs = re.findall(r'\<strong\>(.*?):\s?\<\/strong\>\s?(.*?)(?:<|\Z)', str(section))
+                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>\s?([$€£\d\-\,\.]*)?\s?(.*?)(?:<|\Z)', str(section))
                 break
 
         occupation = None
@@ -57,13 +58,14 @@ class MoneyDiariesPageScraper(PageScraper):
         
         for pair in pairs:
             if pair[0] == 'Occupation':
-                occupation = pair[1].strip()
+                occupation = pair[2].strip()
             elif pair[0] == 'Industry':
-                industry = pair[1].strip()
+                industry = pair[2].strip()
             elif pair[0] == 'Location':
-                location = pair[1].strip()
+                location = pair[2].strip()
             else:
-                extras.append((pair[0].lower(), pair[1].strip()))
+                label, value, descr = (None if item == '' or item is None else item.strip() for item in pair)
+                extras.append((label.lower(), value, descr))
 
         self.occupation_data = OccupationData(occupation, industry, location, extras)
 
@@ -74,21 +76,81 @@ class MoneyDiariesPageScraper(PageScraper):
         for section in section_texts:
             monthly_expense_label_section = section.find('strong', string='Monthly Expenses')
             if monthly_expense_label_section:
-                monthly_expense_label_section.decompose()
-                section_str = str(section)
-                pairs = re.findall(r'\<strong\>(.*?):\s?\<\/strong\>\s?(.*?)(?:<|\Z)', section_str)
+                siblings = monthly_expense_label_section.find_next_siblings()
+                if siblings:
+                    monthly_expense_label_section.decompose()
+                    section_str = str(section)
+                else:
+                    parent = monthly_expense_label_section.find_parent('div', class_='section-outer-container')
+                    sibling = parent.find_next_siblings('div', class_='section-outer-container')
+                    content = sibling[0].findChildren('div', class_='section-text')
+                    section_str = str(content[0])
+
+                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>\s?([$€£\d\,\.]*)?\s?(.*?)(?:<|\Z)', section_str)
                 break
         
-        expenses = [(pair[0].lower(), pair[1].strip()) for pair in pairs]
-
+        expenses = []
+        for pair in pairs:
+            label, value, descr = (None if item == '' or item is None else item.strip() for item in pair)
+            expenses.append((label.lower(), value, descr))
+        
         self.expense_data = ExpensesData(expenses)
 
     def _set_days_data(self):
         """ Get and set expense data of the article """
-        days = []
+        day_sections = self.soup.select('div.section-container.section-text-container h3')
+        if day_sections:
+            self.days_data = self._get_days_when_days_are_headers(day_sections)
+        else:
+            # Get days when day is just <strong></strong>
+            react_elements = self.soup.select('script[data-react-helmet="true"]')
+            day_sections = []
+            for element in react_elements:
+                days_content = json.loads(element.contents[0])
+                if 'description' in days_content and days_content['description'].startswith("<strong>Day"):
+                    day_sections.append(days_content['description'])
+            self.days_data = self._get_days_when_days_are_strongs(day_sections)
 
-        section_h3s = self.soup.select('div.section-container.section-text-container h3')
-        for section in section_h3s:
+        return
+
+    def _get_days_when_days_are_strongs(self, day_sections):
+        """ Get days data when we have days as strong elements """
+        days = []
+        for section in day_sections:
+            time_entries = []
+            strong_matches = re.findall(r'<strong>(.*?)<\/strong>', str(section))
+
+            matches = re.findall(r'<br>([\d\.\:]{1,5}[ap]m):\s?(.*?)([$€£\d\,\.]{2,})?<br>', str(section))
+
+            for match in matches:
+                time_str = match[0]
+                descr = match[1] if match[1] else None
+                money_spent = match[2] if match[2] else None
+                if "." in time_str:
+                    time_of_day = datetime.strptime(time_str, "%I.%M%p")
+                else:
+                    time_of_day = datetime.strptime(time_str, "%I%p")
+
+                time_entries.append(TimeEntry(
+                        time_of_day=time_of_day, 
+                        description=descr, 
+                        money_spent=money_spent
+                    ))
+            
+            days.append(
+                Day(
+                    title=strong_matches[0] if len(strong_matches) > 1 else None,
+                    total=strong_matches[1].replace('Total: ', '') if len(strong_matches) > 1 else None,
+                    time_entries=time_entries
+                )
+            )
+        return days
+           
+
+    def _get_days_when_days_are_headers(self, day_sections):
+        """ Get days data when we have days as h3s """
+        days = []
+        for section in day_sections:
             time_entries = []
             daily_total = ''
             parent = section.find_parent('div', class_='section-outer-container')
@@ -130,6 +192,4 @@ class MoneyDiariesPageScraper(PageScraper):
                         money_spent=money_spent
                     ))
             days.append(Day(title=str(section.contents[0]), total=daily_total, time_entries=time_entries))
-        self.days_data = days
-        
-        return
+        return days

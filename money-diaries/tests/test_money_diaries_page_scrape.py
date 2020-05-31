@@ -28,17 +28,17 @@ class MoneyDiariesPageScraperTest(unittest.TestCase):
         self.assertEqual(self.scrape.occupation_data.industry, 'Food Service')
         self.assertEqual(self.scrape.occupation_data.location, 'Minneapolis, MN')
         self.assertEqual(self.scrape.occupation_data.extras, [
-            ('age', '27'), ('salary', '$20,000'), ('paycheck amount (2x/month)', '$630-$670')
+            ('age', '27', None), ('salary', '$20,000', None), ('paycheck amount (2x/month)', '$630-$670', None)
             ])
 
     def test__set_expense_data_sets_data(self):
         self.scrape._set_expenses_data()
         self.assertEqual(self.scrape.expense_data.expenses, [
-            ('rent', '$525'),
-            ('gym', '$54'),
-            ('electricity bill', '$24'),
-            ('gas bill', '$26'),
-            ('internet', '$20')
+            ('rent', '$525', None),
+            ('gym', '$54', None),
+            ('electricity bill', '$24', None),
+            ('gas bill', '$26', None),
+            ('internet', '$20', None)
             ])
 
     def test__set_days_data(self):
@@ -62,6 +62,69 @@ class MoneyDiariesPageScraperTest(unittest.TestCase):
         self.assertEqual(day_0_time_entries[4].description, "Since Target is near a grocery store, I pop in and put $25 on my transit card and buy a pack of 20 stamps for $10. The stamps are all white Santas, but it's either that or American flags, so I'm going with festive hetero-patriarchy. I get home feeling ready to make cards and stretch my artistic skills to the limit. ")
         self.assertEqual(day_0_time_entries[4].money_spent, "$35")
         self.assertEqual(day_0_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=16, minute=15))
+
+
+class MoneyDiariesGbScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-anaesthetist-coronavirus.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'Money Diary: An ICU Doctor In Bristol On 60k')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Anonymous')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 5, 20, 0, 0))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, None)
+        self.assertEqual(self.scrape.occupation_data.industry, 'Healthcare')
+        self.assertEqual(self.scrape.occupation_data.location, 'Bristol')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '31', None), 
+            ('salary', '£60,000', 'ish, changes every three months depending on the amount of out-of-hours work. Contracts are like unicorns in the NHS so I’m never sure how much I should earn.'),
+            ('paycheque amount', '£3,175', '(after tax and student loan).'),
+            ('housemates', None, 'None.')
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+            ('housing costs', '£600', '(£400 mortgage, £200 rent for 50% property and service charge), this is the least I’ve ever paid. I’m hoping to buy the whole property soon or increase mortgage payments.'),
+            ('credit cards', '£2,400.', 'I paid off £2,200 at the start of the month from study budget reimbursements and holiday refunds. I pay £250 a month and hope to pay it all off by September. This credit card debt was up to £7,000 and has been hanging over me for years. Lockdown has actually helped me save enough to pay a chunk off.'),
+            ('utilities', '£350', ': council tax, water, electricity (this is £120/month, I only have electricity and a dodgy old boiler and heaters, which I plan on changing to more energy-efficient ones when lockdown is over), window cleaner, house, life and appliance insurance, Sky TV and broadband.'),
+            ('transportation', '£30', 'roughly on petrol, more if I visit people. I cycle, run and walk as much as possible.'),
+            ('phone bill', '£60', 'including insurance.'),
+            ('savings?', '£2,265.', '£1,000 is earmarked for paying off my credit card but I like to have enough available in case of an emergency. There was more but I bought my flat this time last year. My parents paid for the deposit and new flooring (I’m eternally grateful and will pay them back one day), I paid the legal fees, furniture and new white goods.'),
+            ('monzo', None, 'I put about £400-500/month in this account. I take my card to work so it pays for lunches, supermarket trips and drinks out. I round up my spending to the nearest pound, also I put £5/day into a separate account. So far it has £550 in, I’m saving up for a Gucci handbag – it was meant to be a treat when I got my training job but I bought a flat and new sofa instead, so I’m going to get it once I pass all my exams.'),
+            ('other', None, 'Spotify £14.99, Netflix £5.99, Apple storage £0.79, PayPal credit for Dyson Airwrap £37.50.'),
+            ('annual', '£550', "car insurance, £200 tax, service, MOT. I got given my mum's old car as a graduation present, he’s 12 years old and luckily never had any major problems."),
+            ('professional subscriptions', '£700', 'ish, this year I’ll also spend over £2,000 on exams and courses. I took the first exam the week before lockdown – we were meant to get results early April but this has been delayed until the world restarts. I know it’s not a big deal but it adds an extra anxiety to life and I don’t know if I should start studying for a resit or my last ever exam.')
+            ])
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '£146.91')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 18)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[17].description, "Shower, have a sleeping tablet, make a hot water bottle (even in the heatwave my flat is freezing), put on some night cream – I use Drunk Elephant LaLa and it's the most amazing thing ever, like a little treat for my face. Finally go to bed.")
+        self.assertEqual(day_0_time_entries[17].money_spent, None)
+        self.assertEqual(day_0_time_entries[17].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=15))
+
+        self.assertEqual(self.scrape.days_data[5].title, 'Day Six')
+        self.assertEqual(self.scrape.days_data[5].total, '£76')
+        self.assertEqual(len(self.scrape.days_data[5].time_entries), 10)
+
+        day_5_time_entries = self.scrape.days_data[5].time_entries
+        self.assertEqual(day_5_time_entries[4].description, 'Find a colouring book I got for my 30th birthday and spend some time doing that.')
+        self.assertEqual(day_5_time_entries[4].money_spent, None)
+        self.assertEqual(day_5_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=15, minute=30))
 
 
 if __name__ == '__main__':

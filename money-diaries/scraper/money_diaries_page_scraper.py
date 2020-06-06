@@ -59,7 +59,7 @@ class MoneyDiariesPageScraper(PageScraper):
         section_texts = self.soup.findAll('div', class_='section-text')
         pairs = None
         for section in section_texts:
-            if section.find('strong', string='Occupation:') or section.find('strong', string='Industry: '):
+            if section.find('strong', string='Occupation:') or section.find('strong', string='Industry: ') or section.find('strong', string='Industry:'):
                 pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>\s?([$€£\d\-\,\.]*)?\s?(.*?)(?:<|\Z)', str(section))
                 break
 
@@ -86,9 +86,9 @@ class MoneyDiariesPageScraper(PageScraper):
     def _set_expenses_data(self):
         """ Get and set expense data of the article """
         section_texts = self.soup.findAll('div', class_='section-text')
-        pairs = None
+        pairs = []
         for section in section_texts:
-            monthly_expense_label_section = section.find('strong', string='Monthly Expenses')
+            monthly_expense_label_section = section.find('strong', string=re.compile('Monthly Expenses\s?'))
             if monthly_expense_label_section:
                 siblings = monthly_expense_label_section.find_next_siblings()
                 if siblings and monthly_expense_label_section.previousSibling is None:
@@ -105,7 +105,7 @@ class MoneyDiariesPageScraper(PageScraper):
                         content = sibling[0].findChildren('div', class_='section-text')
                         section_str = str(content[0])
 
-                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>\s?([$€£\d\,\.]*)?\s?(.*?)(?:<|\Z)', section_str)
+                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\,\.]*)?\s?(.*?)(?:<|\Z)', section_str)
                 break
         
         expenses = []
@@ -142,7 +142,7 @@ class MoneyDiariesPageScraper(PageScraper):
             time_entries = []
             strong_matches = re.findall(r'<strong>(.*?)<\/strong>', str(section))
 
-            matches = re.findall(r'<br>([\d\.\:]{1,5}[ap]m):\s?(.*?)([$€£\d\,\.]{2,})?<br>', str(section))
+            matches = re.findall(r'<br>([\d\.\:]{1,5}[ap]m):\s?(.*?)([$€£\d\,\.]{2,})?\s?<br>', str(section))
 
             for match in matches:
                 time_str = match[0]
@@ -155,14 +155,14 @@ class MoneyDiariesPageScraper(PageScraper):
 
                 time_entries.append(TimeEntry(
                         time_of_day=time_of_day, 
-                        description=descr, 
-                        money_spent=money_spent
+                        description=descr.strip() if descr else None, 
+                        money_spent=money_spent.strip() if money_spent else None
                     ))
             
             days.append(
                 Day(
-                    title=strong_matches[0] if len(strong_matches) > 1 else None,
-                    total=strong_matches[1].replace('Total: ', '') if len(strong_matches) > 1 else None,
+                    title=strong_matches[0].strip() if len(strong_matches) > 1 else None,
+                    total=strong_matches[-1].replace('Total: ', '').strip() if len(strong_matches) > 1 else None,
                     time_entries=time_entries
                 )
             )

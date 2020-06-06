@@ -190,5 +190,66 @@ class MoneyDiariesUsMarketingCoordinatorScrapeTest(unittest.TestCase):
         self.assertEqual(day_3_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=11, minute=0))
 
 
+class MoneyDiariesGbDoctorRedeployedCoronaVirusScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-doctor-redeployed-coronavirus.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'Money Diary: A 27-Year-Old Doctor On 47k Redeployed For COVID-19')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Anonymous')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 4, 22, 6, 0, 42))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, None)
+        self.assertEqual(self.scrape.occupation_data.industry, 'Medical')
+        self.assertEqual(self.scrape.occupation_data.location, 'London')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '27', None), 
+            ('salary', '£47,000', None),
+            ('paycheque amount', '£3,200', "this month – it depends on how much 'out of hours' work I do."),
+            ('number of housemates', None, 'Two')
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('housing costs', '£750', None), 
+                ('loan payments', None, 'No student loan. University is pretty much free where I’m from and my parents/ very part-time job helped with living costs. I have just paid off my bike via the cycle to work scheme, which cost about £50 per month. I have an American Express credit card which I pay off by standing order (in full) every month.'), 
+                ('utilities', '£10', 'for internet, £30ish council tax, £20 electricity, £10 water (approx).'), 
+                ('transportation', '£200', 'per month on the Tube and buses. We rotate from hospital to hospital during our training – I cycle to the nearby ones but this one is reeeeally far away. I’m not completely sold on living in a city and this doesn’t help. Also, my partner lives overseas so I pay for flights to see him every few months, probably averaging about £1,200 per year. Long distance is expensive! We have no upcoming trips due to the current pandemic so I won’t include flights this week.'), 
+                ('phone bill', '£20', 'per month, which includes Spotify premium. I haggled it down from £24!'), 
+                ('savings?', None, 'From putting away money every month (£550 per month atm), taking on extra shifts and selling my car, I have just over £20,000 in a stocks and shares ISA (which was worth a good bit more a few weeks ago). I’m hoping to buy a house in the near future so fingers crossed it picks up a bit! I plan to swap this money to a less risky option once the pandemic is over.'), 
+                ('medical training expenses', None, 'We pay for a number of our training costs out of pocket, which we can claim tax back on. These include: medical council fees (£153 this year), medical association (a few £10s per month), royal college fees (£280 this year), exams (£340 this year) etc.'), 
+            ])
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '£4.68')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 7)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[3].description, 'All hospital coffee shops are closed. I head to the local corner shop and buy instant coffee/milk/biscuits. £4.68. It’s going to be a tough few weeks and we won’t get through them without coffee!')
+        self.assertEqual(day_0_time_entries[3].money_spent, None)
+        self.assertEqual(day_0_time_entries[3].time_of_day, datetime(year=1900, month=1, day=1, hour=11, minute=30))
+
+        self.assertEqual(self.scrape.days_data[3].title, 'Day Four')
+        self.assertEqual(self.scrape.days_data[3].total, '£142.13 (oops)')
+        self.assertEqual(len(self.scrape.days_data[3].time_entries), 5)
+
+        day_3_time_entries = self.scrape.days_data[3].time_entries
+        self.assertEqual(day_3_time_entries[1].description, 'Still queueing to get in – it’s insanely well organised. Someone comes along the queue telling us that key workers can skip to the front. I guiltily walk to the top of the queue and manage to get eggs from the NHS stash. Thank you Waitrose! Get flour (for our sourdough starter, I’m a basic bitch), bananas, oranges, Dettol, beers, chicken, bagels, dark chocolate and some other ingredients. £35.21. I’m sharing food with my flatmate during the lockdown but she’s doing 90% of the cooking while I’m at work so I feel I should definitely pay more. I pop into a pharmacy on the way home to buy paracetamol and hand cream. My hands are chapped and peeling at the knuckles. I need to make sure they don’t crack or bleed as it’s an infection risk. I’ve read that this cream (O’Keeffe’s) is really effective so I give it a go. We get chatting at the till and they give me an NHS discount! Amazing.')
+        self.assertEqual(day_3_time_entries[1].money_spent, '£7.57')
+        self.assertEqual(day_3_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=0))
+
+
+
 if __name__ == '__main__':
     unittest.main()

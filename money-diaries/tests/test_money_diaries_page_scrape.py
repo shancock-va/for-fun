@@ -250,6 +250,66 @@ class MoneyDiariesGbDoctorRedeployedCoronaVirusScrapeTest(unittest.TestCase):
         self.assertEqual(day_3_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=0))
 
 
+class MoneyDiariesGbPrivateNannyScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-private-nanny-on-furlough.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'Money Diary: A Private Nanny On Furlough')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Anonymous')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 4, 29, 6, 0, 29))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, None)
+        self.assertEqual(self.scrape.occupation_data.industry, 'Nanny')
+        self.assertEqual(self.scrape.occupation_data.location, 'Berkshire')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '26', None), 
+            ('salary', '£34,000', None),
+            ('paycheque amount', None, 'Usually £2,100. Unsure what my next one will be although I anticipate around £1,600 with furlough.'),
+            ('number of housemates', None, 'One, my boyfriend E.')
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('housing costs', None, 'Mortgage is £950, split between me and E.'), 
+                ('loan payments', None, 'None but £400 sitting on a credit card that shouldn’t be...eek!'), 
+                ('utilities', None, 'Water £30, gas £40, electric £30, plus ground rent £240 per annum and service charge £120 per month.'), 
+                ('transportation', '£123', 'for the car (split with E), £120 on a normal month in fuel, £2.63 tax (yep, paid monthly ha).'), 
+                ('phone bill', '£12', 'SIM only, iPhone paid off last year.'), 
+                ('savings?', None, 'Around £8,000 personal, £2,000 split with E for a holiday that clearly isn’t happening now.'), 
+                ('other', '£5.99', 'Netflix, £12 pet insurance for the cat that now lives with my sister (betrayal at its finest), £240 put into our joint account for food, despite shopping at Aldi. £12 nanny insurance (kids are mental, insurance is crucial). £7.50 Friction Free Shaving subscription – lifesaver.\xa0£80 internet and phone (split with E).'), 
+            ])
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '£4.99')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 7)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[3].description, 'Embrace my inner Jamie Oliver and decide to whip up a tikka roast chicken and whatever sides look a bit sad in the fridge. This is clearly the definition of frugal. Remind myself to boast about it to E next time he slates our shopping bill.')
+        self.assertEqual(day_0_time_entries[3].money_spent, None)
+        self.assertEqual(day_0_time_entries[3].time_of_day, datetime(year=1900, month=1, day=1, hour=16, minute=0))
+
+        self.assertEqual(self.scrape.days_data[3].title, 'Day Four')
+        self.assertEqual(self.scrape.days_data[3].total, '£36.09')
+        self.assertEqual(len(self.scrape.days_data[3].time_entries), 11)
+
+        day_3_time_entries = self.scrape.days_data[3].time_entries
+        self.assertEqual(day_3_time_entries[1].description, 'YouTube Pilates to try and remind myself that I need to move at some point this week. Realise my local gym must do a relaxing version because after 25 minutes of a toned blonde woman shouting "JUST BREATHE" at me, I can’t breathe.')
+        self.assertEqual(day_3_time_entries[1].money_spent, None)
+        self.assertEqual(day_3_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=30))
+
+
 
 if __name__ == '__main__':
     unittest.main()

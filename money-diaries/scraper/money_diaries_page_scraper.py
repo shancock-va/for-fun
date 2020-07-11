@@ -107,7 +107,7 @@ class MoneyDiariesPageScraper(PageScraper):
                         content = sibling[0].findChildren('div', class_='section-text')
                         section_str = str(content[0])
 
-                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\,\.]*)?\s?(.*?)(?:<|\Z)', section_str)
+                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?~?([$€£\-\d\,\.]*)?\s?(.*?)(?:<|\Z)', section_str)
                 break
         
         expenses = []
@@ -200,21 +200,22 @@ class MoneyDiariesPageScraper(PageScraper):
                     daily_total = re.findall(r'([$€£\d\,\.]{2,})', str(daily_total_section))[0]
 
                 # Section, not always a single time entry at this point
-                time_sections_found = re.split(r'([\d\:]*\s[ap]\.?m\.?)\s*—\s*', time_section.decode_contents())
+                time_sections_found = re.split(r'([\d\:]+\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
                 if len(time_sections_found) < 3:
                     continue
 
                 time_section_iterator = iter(time_sections_found[1:])
 
+                prev_am_pm = 'am'
                 for time_section in time_section_iterator:
-                    time_entry = self._create_time_entry(time_section, next(time_section_iterator))
+                    time_entry, prev_am_pm = self._create_time_entry(time_section, next(time_section_iterator), prev_am_pm)
                     if time_entry:
                         time_entries.append(time_entry)
 
             days.append(Day(title=str(section.contents[0]), total=daily_total, time_entries=time_entries))
         return days
 
-    def _create_time_entry(self, time_raw_str: str, body_str: str):
+    def _create_time_entry(self, time_raw_str: str, body_str: str, default_am_pm: str):
         """ Create a time entry based on some text """
         money_spent = None
         if not time_raw_str or not body_str:
@@ -227,13 +228,21 @@ class MoneyDiariesPageScraper(PageScraper):
             money_spent = money_spent_section.contents[0]
             money_spent_section.decompose()
 
-        if ":" in time_raw_str:
-            time_of_day = datetime.strptime(time_raw_str.replace('.', ''), "%I:%M %p")
-        else:
-            time_of_day = datetime.strptime(time_raw_str.replace('.', ''), "%I %p")
+        time_raw_str = time_raw_str.replace('.', '')
+        default_am_pm = 'am' if not default_am_pm else default_am_pm
 
-        return TimeEntry(
+        if not time_raw_str.endswith('m'):
+            time_raw_str += f" {default_am_pm}"
+        else:
+            default_am_pm = time_raw_str[-2:]
+
+        if ":" in time_raw_str:
+            time_of_day = datetime.strptime(time_raw_str, "%I:%M %p")
+        else:
+            time_of_day = datetime.strptime(time_raw_str, "%I %p")
+
+        return (TimeEntry(
                         time_of_day=time_of_day, 
                         description=body.text.strip(), 
                         money_spent=money_spent
-                    )
+                    ), default_am_pm)

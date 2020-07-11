@@ -59,7 +59,7 @@ class MoneyDiariesPageScraperTest(unittest.TestCase):
         self.assertEqual(len(self.scrape.days_data[6].time_entries), 6)
 
         day_0_time_entries = self.scrape.days_data[6].time_entries
-        self.assertEqual(day_0_time_entries[4].description, "Since Target is near a grocery store, I pop in and put $25 on my transit card and buy a pack of 20 stamps for $10. The stamps are all white Santas, but it's either that or American flags, so I'm going with festive hetero-patriarchy. I get home feeling ready to make cards and stretch my artistic skills to the limit. ")
+        self.assertEqual(day_0_time_entries[4].description, "Since Target is near a grocery store, I pop in and put $25 on my transit card and buy a pack of 20 stamps for $10. The stamps are all white Santas, but it's either that or American flags, so I'm going with festive hetero-patriarchy. I get home feeling ready to make cards and stretch my artistic skills to the limit.")
         self.assertEqual(day_0_time_entries[4].money_spent, "$35")
         self.assertEqual(day_0_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=16, minute=15))
 
@@ -185,7 +185,7 @@ class MoneyDiariesUsMarketingCoordinatorScrapeTest(unittest.TestCase):
         self.assertEqual(len(self.scrape.days_data[3].time_entries), 4)
 
         day_3_time_entries = self.scrape.days_data[3].time_entries
-        self.assertEqual(day_3_time_entries[1].description, 'I get a much-anticipated call! I purchased a 1973 VW Beetle in September as a "fun car" to enjoy the sunny Arizona weather in. It\'s been in the shop for the last two weeks due to some clutch and pressure plate issues, and I just got a call that it\'s ready for pickup. The payment came in two parts, the first part already paid for was $1,200 and then the final cost for completion was $305. I pay over the phone with my credit card which earns cashback and will pay it off as soon as the bill processes. ')
+        self.assertEqual(day_3_time_entries[1].description, 'I get a much-anticipated call! I purchased a 1973 VW Beetle in September as a "fun car" to enjoy the sunny Arizona weather in. It\'s been in the shop for the last two weeks due to some clutch and pressure plate issues, and I just got a call that it\'s ready for pickup. The payment came in two parts, the first part already paid for was $1,200 and then the final cost for completion was $305. I pay over the phone with my credit card which earns cashback and will pay it off as soon as the bill processes.')
         self.assertEqual(day_3_time_entries[1].money_spent, '$305')
         self.assertEqual(day_3_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=11, minute=0))
 
@@ -308,6 +308,76 @@ class MoneyDiariesGbPrivateNannyScrapeTest(unittest.TestCase):
         self.assertEqual(day_3_time_entries[1].description, 'YouTube Pilates to try and remind myself that I need to move at some point this week. Realise my local gym must do a relaxing version because after 25 minutes of a toned blonde woman shouting "JUST BREATHE" at me, I can’t breathe.')
         self.assertEqual(day_3_time_entries[1].money_spent, None)
         self.assertEqual(day_3_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=30))
+
+
+class MoneyDiariesUsSeniorAccountExecScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-senior-account-executive-charleston-sc-salary-money-diary.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'A Week In Charleston, SC, On A $50,000 Salary')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Refinery29')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 5, 1, 15, 30, 22))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'Senior Account Executive')
+        self.assertEqual(self.scrape.occupation_data.industry, 'Communications')
+        self.assertEqual(self.scrape.occupation_data.location, 'Charleston, SC')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '23', None), 
+            ('salary', '$50,000', None),
+            ('net worth', None, 'About $30,000 across high yield savings, index funds, single stocks, my retirement accounts, and my car'),
+            ('debt', '$0', '(I had a merit scholarship for college, I bought my car in cash, and I pay my credit cards in full every month.)'),
+            ('paycheck amount (2x/month)', '$1,414.74', '(post-tax and after health insurance of $120/paycheck)'),
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('rent', '$974', '(Room in a three-bed, three-bath duplex with the most amazing high ceilings and a beautiful kitchen)'), 
+                ('car insurance', '$105', None), 
+                ('utilities', '$75', '-$100'), 
+                ('internet', '$33.88', None), 
+                ('cbs all access', '$6', '(Trade this with family members for Sling, Netflix, and Hulu)'), 
+                ('cell phone', '$10', None), 
+                ('spotify', '$8', None), 
+                ('canva', '$12.95', None), 
+                ('classpass', '$29', None), 
+                ('ally savings', '$250', None), 
+                ('betterment', '$100', None), 
+                ('roth ira', '$100', "(my company 401(k) hasn't kicked in yet)"), 
+                ('annual expenses', None, None), 
+                ('costco', '$60', None), 
+                ("renter's insurance", '$180', None), 
+                ('credit card', '$150', None), 
+            ])
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[1].title, 'Day Two')
+        self.assertEqual(self.scrape.days_data[1].total, '$20.29')
+        self.assertEqual(len(self.scrape.days_data[1].time_entries), 7)
+
+        day_1_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_1_time_entries[5].description, "I get a lot of last-minute social requests this afternoon so I am just now wrapping up work. I was going to go to Trader Joe's but sadly they close at 7 so I decide to go to Publix instead. I grab the mask that my mom sent me last week and drive over there. The store has made aisles one-way only which is great for social distancing but also makes shopping more confusing. From my list, I get two boxes of Chex, Cheerios, pretzels, two packages of Oreos, two bags of bagel chips, fresh salsa, jarred salsa, tortilla chips, chocolate chips, flour, butter, and cream cheese. I impulse buy Cinnamon Toast Crunch because it's BOGO, Pringles, and a delicious pint of Churro Dough ice cream.")
+        self.assertEqual(day_1_time_entries[5].money_spent, '$60.99')
+        self.assertEqual(day_1_time_entries[5].time_of_day, datetime(year=1900, month=1, day=1, hour=18, minute=30))
+
+        self.assertEqual(self.scrape.days_data[4].title, 'Day Five')
+        self.assertEqual(self.scrape.days_data[4].total, '$0')
+        self.assertEqual(len(self.scrape.days_data[4].time_entries), 7)
+
+        day_4_time_entries = self.scrape.days_data[4].time_entries
+        self.assertEqual(day_4_time_entries[1].description, "I get about halfway through my book before my roommates make it out to the common area. We chat for a bit and put on Booksmart. I heat up some frozen Trader Joe's Penne Arrabiata for lunch.")
+        self.assertEqual(day_4_time_entries[1].money_spent, None)
+        self.assertEqual(day_4_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=11, minute=30))
 
 
 

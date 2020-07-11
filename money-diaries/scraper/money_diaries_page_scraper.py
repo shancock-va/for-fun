@@ -6,6 +6,8 @@ from datetime import datetime
 import json
 import re
 
+from bs4 import BeautifulSoup
+
 from scraper import PageScraper
 from money_diaries_model import PageMetaData, OccupationData, ExpensesData, TimeEntry, Day
 
@@ -88,7 +90,7 @@ class MoneyDiariesPageScraper(PageScraper):
         section_texts = self.soup.findAll('div', class_='section-text')
         pairs = []
         for section in section_texts:
-            monthly_expense_label_section = section.find('strong', string=re.compile('Monthly Expenses\s?'))
+            monthly_expense_label_section = section.find('strong', string=re.compile(r'Monthly Expenses\s?'))
             if monthly_expense_label_section:
                 siblings = monthly_expense_label_section.find_next_siblings()
                 if siblings and monthly_expense_label_section.previousSibling is None:
@@ -117,7 +119,10 @@ class MoneyDiariesPageScraper(PageScraper):
 
     def _set_days_data(self):
         """ Get and set expense data of the article """
-        day_sections = self.soup.select('div.section-container.section-text-container h3')
+        # after-section-content contains ads
+        soup = self._remove_content_from_soup(self.soup, 'div.after-section-content')
+
+        day_sections = soup.select('div.section-container.section-text-container h3')
         if day_sections:
             self.days_data = self._get_days_when_days_are_headers(day_sections)
         else:
@@ -130,6 +135,12 @@ class MoneyDiariesPageScraper(PageScraper):
             self.days_data = self._get_days_when_days_are_strongs(day_sections)
 
         return
+
+    def _remove_content_from_soup(self, soup, css_selector):
+        """ Removes some elements from soup """
+        for element in self.soup.select(css_selector):
+            element.decompose()
+        return soup
 
     def _get_react_data_groups(self):
         """ Gets react data from script tags returns an array of dicts """
@@ -177,41 +188,52 @@ class MoneyDiariesPageScraper(PageScraper):
             daily_total = ''
             parent = section.find_parent('div', class_='section-outer-container')
             for sibling in parent.find_next_siblings('div', class_='section-outer-container'):
-                money_spent = None
                 if sibling.select('.section-text-container h3'):
                     break # start a new day
 
                 time_section = sibling.find('div', class_='section-text')
-                if not time_section or len(time_section.contents) == 0:
-                    continue
-                money_spent_section = time_section.find('strong')
-
-                if money_spent_section and 'Daily Total' in str(money_spent_section):
-                    daily_total = re.findall(r'([\$\d\.]+)', str(money_spent_section))[0]
-                    continue
-                elif money_spent_section:
-                    money_spent = money_spent_section.contents[0]
-                    money_spent_section.decompose()
-
-                if len(time_section.contents) == 0:
-                    continue
-                    
-                matches = re.findall(r'([\d\:]*\s[ap]\.?m\.?)\s*—\s*(.*)', str(time_section.contents[0]))
-
-                if len(matches) == 0:
+                if not time_section:
                     continue
 
-                time_str = matches[0][0]
-                descr = matches[0][1]
-                if ":" in time_str:
-                    time_of_day = datetime.strptime(time_str.replace('.', ''), "%I:%M %p")
-                else:
-                    time_of_day = datetime.strptime(time_str.replace('.', ''), "%I %p")
+                daily_total_section = time_section.find('strong', string=re.compile(r'Daily Total.*'))
+                if daily_total_section:
+                    daily_total = re.findall(r'([$€£\d\,\.]{2,})', str(daily_total_section))[0]
 
-                time_entries.append(TimeEntry(
-                        time_of_day=time_of_day, 
-                        description=descr, 
-                        money_spent=money_spent
-                    ))
+                # Section, not always a single time entry at this point
+                time_sections_found = re.split(r'([\d\:]*\s[ap]\.?m\.?)\s*—\s*', time_section.decode_contents())
+                if len(time_sections_found) < 3:
+                    continue
+
+                time_section_iterator = iter(time_sections_found[1:])
+
+                for time_section in time_section_iterator:
+                    time_entry = self._create_time_entry(time_section, next(time_section_iterator))
+                    if time_entry:
+                        time_entries.append(time_entry)
+
             days.append(Day(title=str(section.contents[0]), total=daily_total, time_entries=time_entries))
         return days
+
+    def _create_time_entry(self, time_raw_str: str, body_str: str):
+        """ Create a time entry based on some text """
+        money_spent = None
+        if not time_raw_str or not body_str:
+            return None
+
+        body = BeautifulSoup(body_str, 'html.parser')
+        money_spent_section = body.find('strong')
+
+        if money_spent_section:
+            money_spent = money_spent_section.contents[0]
+            money_spent_section.decompose()
+
+        if ":" in time_raw_str:
+            time_of_day = datetime.strptime(time_raw_str.replace('.', ''), "%I:%M %p")
+        else:
+            time_of_day = datetime.strptime(time_raw_str.replace('.', ''), "%I %p")
+
+        return TimeEntry(
+                        time_of_day=time_of_day, 
+                        description=body.text.strip(), 
+                        money_spent=money_spent
+                    )

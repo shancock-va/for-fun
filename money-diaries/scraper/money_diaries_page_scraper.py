@@ -59,9 +59,9 @@ class MoneyDiariesPageScraper(PageScraper):
     def _set_occupation_data(self):
         """ Get and set occupation data of the article """
         section_texts = self.soup.findAll('div', class_='section-text')
-        pairs = None
+        pairs = []
         for section in section_texts:
-            if section.find('strong', string='Occupation:') or section.find('strong', string='Industry: ') or section.find('strong', string='Industry:'):
+            if section.find('strong', string=re.compile(r'Occupation:\s')) or section.find('strong', string=re.compile(r'Industry:\s')):
                 pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', str(section))
                 break
 
@@ -69,7 +69,7 @@ class MoneyDiariesPageScraper(PageScraper):
         industry = None
         location = None
         extras = []
-        
+
         for pair in pairs:
             if 'monthly expenses' in pair[0].lower() or 'costs' in pair[0].lower():
                 break

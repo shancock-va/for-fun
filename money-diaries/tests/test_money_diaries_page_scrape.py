@@ -1,8 +1,8 @@
 import os
 import sys
 import unittest
+import unicodedata
 from unittest import mock
-
 from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'scraper'))
@@ -571,6 +571,106 @@ class MoneyDiarySocialWorkStudentLeedsScrapeTest(unittest.TestCase):
         self.assertEqual(day_4_time_entries[1].description, "£15 transferred into my 'fuel' pot on Monzo. I’ve realised that when I return to work, I won’t have any mileage payments from the previous month, which usually helps with petrol costs. I’ve decided to move £15 each week into a pot to soften the blow when we re-enter the real world.")
         self.assertEqual(day_4_time_entries[1].money_spent, None)
         self.assertEqual(day_4_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=0))
+
+
+class MoneyDiaryBioMedicalScientistManchesterScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-biomedical-scientist-manchester.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'Money Diary: A Biomedical Scientist In Manchester On 42k')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Anonymous')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 5, 29, 6, 0, 30))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'Senior biomedical scientist')
+        self.assertEqual(self.scrape.occupation_data.industry, 'NHS')
+        self.assertEqual(self.scrape.occupation_data.location, 'Manchester')
+        self.assertEqual(self.scrape.occupation_data.extras[:3], [
+            ('age', '33', None), 
+            ('salary', '£41,723', None),
+            ('paycheque amount', None, "Usually around £2,400 after tax, National Insurance, NHS pension (9.3%) and student loan contribution. The exact amount varies depending on how many out-of-hours or extra shifts I have worked the previous month."),
+            ])
+
+        self.assertEqual(
+            (
+                self.scrape.occupation_data.extras[3][0], 
+                self.scrape.occupation_data.extras[3][1], 
+                unicodedata.normalize('NFD',self.scrape.occupation_data.extras[3][2])
+            ),
+            (
+                'number of housemates', 
+                None, 
+                unicodedata.normalize('NFD', 'Three: two cats and one fiancé.')
+            ),
+        )
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(len(self.scrape.expense_data.expenses), 5)
+        self.assertEqual(
+            (
+                self.scrape.expense_data.expenses[0][0], 
+                self.scrape.expense_data.expenses[0][1], 
+                unicodedata.normalize('NFD', self.scrape.expense_data.expenses[0][2])
+            ),
+            (
+                'housing costs', 
+                None, 
+                unicodedata.normalize('NFD', 'My fiancé M and I live in a three-bed semi in south Manchester. My half of the mortgage is £378.')
+            ),
+        )
+        self.assertEqual(
+            self.scrape.expense_data.expenses[1],
+            ('loan payments', '£2,400', "on an interest-free credit card. The balance has gone up and down over the years, starting with funding my master’s degree 10 years ago. Then unexpected large bills arrive so I’ve never quite cleared it (my old and tired car being the main culprit, I just can’t get rid of him yet). I have two cards and always transfer the balance if I’m not able to pay it off in full prior to the interest-free period ending. I pay £200 each month to my credit card and £200 for student loan repayments, which should finally be gone by the end of the year.")
+        )
+        self.assertEqual(
+            self.scrape.expense_data.expenses[2],
+            ('utilities', None, 'My half of all the bills works out at £72 for council tax, £16 for water, £40 for gas and electric, £25 for TV/phone/internet, £4 for Netflix and £15 for pet insurance. Along with our mortgage, these all come out of our joint account, which we both pay £1,000 into each month. The rest goes on food, bits for the house and garden and any fun things we want to do, which usually revolve around eating out with friends – something I am really missing at the moment! Any remaining money gets put into our savings or towards our mortgage.'), 
+        )
+        self.assertEqual(
+            (
+                self.scrape.expense_data.expenses[3][0], 
+                self.scrape.expense_data.expenses[3][1], 
+                unicodedata.normalize('NFD', self.scrape.expense_data.expenses[3][2])
+            ),
+            (
+                'savings?', 
+                None, 
+                unicodedata.normalize('NFD', 'I have approximately £10,000 in a joint savings account with my fiancé which is primarily our wedding fund. A lot of this was meant to be going out to our suppliers over the next month but sadly we have to postpone to next summer due to the pandemic.\xa0We will need to look into what is best to do with this money in the meantime and are continuing to add to the pot for the next year so we can start saving for further house improvements.')
+            ),
+        )
+        self.assertEqual(
+            self.scrape.expense_data.expenses[4],
+            ('all other monthly expenses', '£250', 'into the wedding fund/savings. £28 car insurance, £14 union membership, £14 Institute of Biomedical Science membership, £7.20 life insurance (why do my cats cost more than me?!), £6 bike insurance,\xa0£40 phone bill (I know I could find a better deal but I’m inherently lazy with this kind of thing, plus I now have unlimited data until October for being NHS so will probably sort it out after that ends) and £25.99 gym membership (currently on hold while the gym is closed). I drive to work and usually have to pay for parking (£32) but this has been suspended for the next three months while we all deal with the pandemic. Petrol/diesel we fund from the joint account but while M is also classed as a key worker, his job can be done at home so we are only spending about £30 a month at present.'), 
+        )
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '£16')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 7)
+
+        day_2_time_entries = self.scrape.days_data[1].time_entries
+        self.assertEqual(day_2_time_entries[1].description, "Admit defeat and feed cats. M makes us scrambled egg on toast for breakfast which I eat while messaging my friend about her wedding. They have a lovely day planned so I’m glad she is in good spirits.")
+        self.assertEqual(day_2_time_entries[1].money_spent, None)
+        self.assertEqual(day_2_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=8, minute=0))
+
+        self.assertEqual(self.scrape.days_data[6].title, 'Day Seven')
+        self.assertEqual(self.scrape.days_data[6].total, '£30')
+        self.assertEqual(len(self.scrape.days_data[6].time_entries), 9)
+
+        day_6_time_entries = self.scrape.days_data[6].time_entries
+        self.assertEqual(day_6_time_entries[8].description, "Head to bed.")
+        self.assertEqual(day_6_time_entries[8].money_spent, None)
+        self.assertEqual(day_6_time_entries[8].time_of_day, datetime(year=1900, month=1, day=1, hour=22, minute=30))
 
 
 

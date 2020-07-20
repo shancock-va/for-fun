@@ -93,11 +93,11 @@ class MoneyDiariesGbAnaesthetistScrapeTest(unittest.TestCase):
         self.scrape._set_expenses_data()
         self.assertEqual(self.scrape.expense_data.expenses, [
             ('housing costs', '£600', '(£400 mortgage, £200 rent for 50% property and service charge), this is the least I’ve ever paid. I’m hoping to buy the whole property soon or increase mortgage payments.'),
-            ('credit cards', '£2,400.', 'I paid off £2,200 at the start of the month from study budget reimbursements and holiday refunds. I pay £250 a month and hope to pay it all off by September. This credit card debt was up to £7,000 and has been hanging over me for years. Lockdown has actually helped me save enough to pay a chunk off.'),
+            ('credit cards', '£2,400', 'I paid off £2,200 at the start of the month from study budget reimbursements and holiday refunds. I pay £250 a month and hope to pay it all off by September. This credit card debt was up to £7,000 and has been hanging over me for years. Lockdown has actually helped me save enough to pay a chunk off.'),
             ('utilities', '£350', ': council tax, water, electricity (this is £120/month, I only have electricity and a dodgy old boiler and heaters, which I plan on changing to more energy-efficient ones when lockdown is over), window cleaner, house, life and appliance insurance, Sky TV and broadband.'),
             ('transportation', '£30', 'roughly on petrol, more if I visit people. I cycle, run and walk as much as possible.'),
             ('phone bill', '£60', 'including insurance.'),
-            ('savings?', '£2,265.', '£1,000 is earmarked for paying off my credit card but I like to have enough available in case of an emergency. There was more but I bought my flat this time last year. My parents paid for the deposit and new flooring (I’m eternally grateful and will pay them back one day), I paid the legal fees, furniture and new white goods.'),
+            ('savings?', '£2,265', '£1,000 is earmarked for paying off my credit card but I like to have enough available in case of an emergency. There was more but I bought my flat this time last year. My parents paid for the deposit and new flooring (I’m eternally grateful and will pay them back one day), I paid the legal fees, furniture and new white goods.'),
             ('monzo', None, 'I put about £400-500/month in this account. I take my card to work so it pays for lunches, supermarket trips and drinks out. I round up my spending to the nearest pound, also I put £5/day into a separate account. So far it has £550 in, I’m saving up for a Gucci handbag – it was meant to be a treat when I got my training job but I bought a flat and new sofa instead, so I’m going to get it once I pass all my exams.'),
             ('other', None, 'Spotify £14.99, Netflix £5.99, Apple storage £0.79, PayPal credit for Dyson Airwrap £37.50.'),
             ('annual', '£550', "car insurance, £200 tax, service, MOT. I got given my mum's old car as a graduation present, he’s 12 years old and luckily never had any major problems."),
@@ -513,6 +513,64 @@ class MoneyDiariesUsProjectManagerCopenhagenScrapeTest(unittest.TestCase):
         self.assertEqual(day_4_time_entries[5].description, "Let the long weekend begin! The first thing I do is head to a local running store for a run test. Full disclosure: I'm not a runner. AT ALL. But in January along with my pledge for more mindful eating, I wanted to get back into the rhythm of working out more than once every two weeks (looking at you, fall/winter). Running is something that I hate, until I'm actually doing it. It's also something that S. and I can do together as well so planning to do at least two runs a week. The last run I went on I had horrible foot and ankle pain and realized that my shoes are 1) not running shoes and 2) offer less than zero support. After a quick run test (and not needing any insoles, hooray!!) I land on a pair of Nike Flyknit Infinity Reacts. These things run TIGHT. I'm usually an 8 but I size up to a 9 so I can wear socks with them comfortably. They feel like I'm running on clouds so I can't wait to take these out for a real run this weekend.")
         self.assertEqual(day_4_time_entries[5].money_spent, '$180')
         self.assertEqual(day_4_time_entries[5].time_of_day, datetime(year=1900, month=1, day=1, hour=16, minute=0))
+
+
+class MoneyDiarySocialWorkStudentLeedsScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-social-work-student-leeds.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'Money Diary: A Social Work Student In Leeds On 21k')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Anonymous')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 5, 13, 6, 0, 9))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'Social work student')
+        self.assertEqual(self.scrape.occupation_data.industry, 'Local authority')
+        self.assertEqual(self.scrape.occupation_data.location, 'Leeds')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '26', None), 
+            ('salary', '£21,166', None),
+            ('savings', '£5,500', "in a lifetime ISA"),
+            ('take-home pay', '£1,445', 'I also get mileage payments which range from £0-£100+ per month but at present I’m obviously not receiving this.'),
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('housing costs', None, 'My boyfriend and I live in a rented, three-storey townhouse which we love. I pay £397 for my half. Followed by payment into our bills account of £162 per month to cover Sky, phone, gas/electric, council tax, water, Disney+ and Netflix. We’re lucky that my partner works for Sky so we get a good deal on TV and phones.'), 
+                ('travel', None, "I moved 30 minutes away from work just before lockdown so I haven’t had the full ‘travel to work’ experience yet. I’ve budgeted about £40 per week for petrol, however this will vary depending on the number of visits I have and if I’m at uni that week, as I travel over 100 miles to get there."), 
+                ('debt repayments', '£50', 'per month to a credit card I used for furniture, although I’ve been paying more lately due to not having to pay out for petrol etc.'), 
+                ('other expenses', '£4.99', "for Spotify student, £10.56 for prescription certificate (definitely recommend if you're on more than one long-term medication)."), 
+                ('savings', None, 'I try to put around £150 into savings each month, split between my LISA and holiday pots.'), 
+            ])
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '£138.50')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 8)
+
+        day_2_time_entries = self.scrape.days_data[1].time_entries
+        self.assertEqual(day_2_time_entries[1].description, "Myself and S have been looking at some ladder shelves to add some personality to our front room. We don’t have any window ledges so there’s nowhere to put pictures and knick-knacks. Find some on Groupon where I can also get some cash back – £20 for my half.")
+        self.assertEqual(day_2_time_entries[1].money_spent, None)
+        self.assertEqual(day_2_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=10, minute=0))
+
+        self.assertEqual(self.scrape.days_data[4].title, 'Day Five')
+        self.assertEqual(self.scrape.days_data[4].total, '£18')
+        self.assertEqual(len(self.scrape.days_data[4].time_entries), 9)
+
+        day_4_time_entries = self.scrape.days_data[4].time_entries
+        self.assertEqual(day_4_time_entries[1].description, "£15 transferred into my 'fuel' pot on Monzo. I’ve realised that when I return to work, I won’t have any mileage payments from the previous month, which usually helps with petrol costs. I’ve decided to move £15 each week into a pot to soften the blow when we re-enter the real world.")
+        self.assertEqual(day_4_time_entries[1].money_spent, None)
+        self.assertEqual(day_4_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=0))
 
 
 

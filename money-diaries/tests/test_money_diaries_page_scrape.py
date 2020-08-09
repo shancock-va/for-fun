@@ -673,6 +673,70 @@ class MoneyDiaryBioMedicalScientistManchesterScrapeTest(unittest.TestCase):
         self.assertEqual(day_6_time_entries[8].time_of_day, datetime(year=1900, month=1, day=1, hour=22, minute=30))
 
 
+class MoneyDiaryStudentNYSalaryScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/student-new-your-ny-salary-money-diary.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'A Week In New York, NY On A $1,600 Stipend')
+        self.assertEqual(self.scrape.page_meta_data.author, 'Refinery29')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2020, 7, 20, 15, 30, 7))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'International Student')
+        self.assertEqual(self.scrape.occupation_data.industry, 'Business')
+        self.assertEqual(self.scrape.occupation_data.location, 'New York, NY')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '22', None), 
+            ('salary', '$1,600', 'internship stipend'),
+            ('net worth', '$0', "(but I recognize my privilege — my parents worked hard to send me to the US for university)"),
+            ('debt', '$46,000', '(student loan that I owe my parents)'),
+            ('pronouns', None, 'She/her'),
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('rent', '$880', '(living with four other roommates)'), 
+                ('netflix/hulu', '$0', "(thank god for roommates who are properly employed)"), 
+                ('prime', '$0', "(can you believe I'm just starting my student trial)"), 
+                ('spotify', '$15', None), 
+                ('metrocard', '$127', '(though I stopped getting the monthly pass ever since the pandemic)'), 
+                ('phone', '$40', None), 
+                ('laundry', '$10', None), 
+                ('un sharethemeal donation', '$20', None),
+            ])
+        
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '$0')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 10)
+
+        day_2_time_entries = self.scrape.days_data[1].time_entries
+        self.assertEqual(day_2_time_entries[1].description, "Finally up and headed for the bathroom. I have combination skin so I wash my face with just water when I wake up. Following that is a whole other routine of facial care. I start with Vichy Vitamin C, which I keep in the fridge to slow down the oxidation, followed by a toner. I use a travel spray bottle for toner application because I feel like a lot of liquid is wasted with cotton pads. Next is a moisturizer (Kiehl's Clearly Corrective Moisture Treatment or Vichy Aqualia Thermal Gel) and a generous dollop of sunscreen.")
+        self.assertEqual(day_2_time_entries[1].money_spent, None)
+        self.assertEqual(day_2_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=0))
+
+        self.assertEqual(self.scrape.days_data[6].title, 'Day Seven')
+        self.assertEqual(self.scrape.days_data[6].total, '$8')
+        self.assertEqual(len(self.scrape.days_data[6].time_entries), 8)
+
+        day_6_time_entries = self.scrape.days_data[6].time_entries
+        self.assertEqual(day_6_time_entries[7].description, "I'm still up and feeling miserable, so I decided to take tomorrow off. R. knocks on the door to ask if I want to hang in the living room instead. J. and N. bought me some snacks so I guess they've heard as well. We spend the night listening to N. play his guitar and quiet conversations between the guys on their favorite bands and concerts they've been to. At this point, no one knows what's going to happen. I feel a little better knowing that I do have people standing with me.")
+        self.assertEqual(day_6_time_entries[7].money_spent, None)
+        self.assertEqual(day_6_time_entries[7].time_of_day, datetime(year=1900, month=1, day=1, hour=0, minute=0))
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

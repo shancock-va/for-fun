@@ -61,7 +61,7 @@ class MoneyDiariesPageScraper(PageScraper):
         section_texts = self.soup.findAll('div', class_='section-text')
         pairs = []
         for section in section_texts:
-            if section.find('strong', string=re.compile(r'Occupation:\s')) or section.find('strong', string=re.compile(r'Industry:\s')):
+            if section.find('strong', string=re.compile(r'Occupation:\s')) or section.find('strong', string=re.compile(r'(Industry)|(Occuptation):\s')):
                 pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', str(section))
                 break
 
@@ -203,7 +203,7 @@ class MoneyDiariesPageScraper(PageScraper):
                     daily_total = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(daily_total_section))[0]
 
                 # Section, not always a single time entry at this point
-                time_sections_found = re.split(r'([\d\:]+\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
+                time_sections_found = re.split(r'([\d\:\.]+\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
                 if len(time_sections_found) < 3:
                     continue
 
@@ -242,7 +242,10 @@ class MoneyDiariesPageScraper(PageScraper):
         if ":" in time_raw_str:
             time_of_day = datetime.strptime(time_raw_str, "%I:%M %p")
         else:
-            time_of_day = datetime.strptime(time_raw_str, "%I %p")
+            try:
+                time_of_day = datetime.strptime(time_raw_str, "%I %p")
+            except ValueError:
+                time_of_day = datetime.strptime(time_raw_str, "%I%M %p")
 
         return (TimeEntry(
                         time_of_day=time_of_day, 

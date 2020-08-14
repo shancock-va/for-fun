@@ -62,7 +62,8 @@ class MoneyDiariesPageScraper(PageScraper):
         pairs = []
         for section in section_texts:
             if section.find('strong', string=re.compile(r'Occupation:\s')) or section.find('strong', string=re.compile(r'(Industry)|(Occuptation):\s')):
-                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', str(section))
+                sub_section = re.split(r'\<strong\>Monthly Expenses:?\s?\<\/strong\>', str(section))
+                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', sub_section[0])
                 break
 
         occupation = None
@@ -101,10 +102,10 @@ class MoneyDiariesPageScraper(PageScraper):
                     section_str = str(section)
                 else:
                     parent = monthly_expense_label_section.find_parent('div', class_='section-outer-container')
-                    if parent.find('strong', string='Industry:'):
+                    if parent.find('strong', string=re.compile(r'Industry:?\s?')):
                         # Expenses and Occupation data are not well separated
                         contents = parent.findChildren('div', class_='section-text')[0].contents
-                        section_str = re.findall(r'\<strong\>Monthly Expenses\<\/strong\>(.*)', ''.join(map(str, contents)))[0]
+                        section_str = re.findall(r'\<strong\>Monthly Expenses:?\s?\<\/strong\>(.*)', ''.join(map(str, contents)))[0]
                     else:
                         sibling = parent.find_next_siblings('div', class_='section-outer-container')
                         content = sibling[0].findChildren('div', class_='section-text')
@@ -187,51 +188,104 @@ class MoneyDiariesPageScraper(PageScraper):
         """ Get days data when we have days as h3s """
         days = []
         for section in day_sections:
-            time_entries = []
-            daily_total = ''
             parent = section.find_parent('div', class_='section-outer-container')
-            for sibling in parent.find_next_siblings('div', class_='section-outer-container'):
-                if sibling.select('.section-text-container h3'):
-                    break # start a new day
+            
+            if len(parent.text) > 11: # " Day Three "
+                time_entries, daily_total = self._get_time_entries_when_headers_are_in_same_section_as_text(parent)
+            else:
+                time_entries, daily_total = self._get_time_entries_when_headers_are_not_in_same_section_as_text(parent)
 
-                time_section = sibling.find('div', class_='section-text')
-                if not time_section:
-                    continue
-
-                daily_total_section = time_section.find('strong', string=re.compile(r'Daily Total.*'))
-                if daily_total_section:
-                    daily_total = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(daily_total_section))[0]
-
-                # Section, not always a single time entry at this point
-                time_sections_found = re.split(r'([\d\:\.]+\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
-                if len(time_sections_found) < 3:
-                    continue
-
-                time_section_iterator = iter(time_sections_found[1:])
-
-                prev_am_pm = 'am'
-                for time_section in time_section_iterator:
-                    time_entry, prev_am_pm = self._create_time_entry(time_section, next(time_section_iterator), prev_am_pm)
-                    if time_entry:
-                        time_entries.append(time_entry)
-
-            days.append(Day(title=str(section.contents[0]), total=daily_total, time_entries=time_entries))
+            if section.text and not section.find('strong', string=re.compile(r'Weekly Total.*')):
+                days.append(Day(title=section.text.strip(), total=daily_total, time_entries=time_entries))
         return days
+
+    def _get_time_entries_when_headers_are_in_same_section_as_text(self, parent):
+        """
+            Get time entries when headers are not in the same section as text, 
+            returns tuple (time_entries, daily_total) 
+        """
+        time_entries = []
+        daily_total = ''
+        daily_total_section = None
+
+        time_section = parent.find('div', class_='section-text')
+        strong_sections = time_section.findAll('strong')
+        for strong_section in strong_sections:
+            daily_total_section = re.findall(r'((?:Daily\s)?Total.*)', str(strong_section))
+            if len(daily_total_section) > 0:
+                break
+
+        if daily_total_section:
+            daily_total = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(daily_total_section))[0]
+
+        # Section, not always a single time entry at this point
+        time_sections_found = re.split(r'([\d\:\.]+\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
+
+        time_section_iterator = iter(time_sections_found[1:])
+        prev_am_pm = 'am'
+        for time_section in time_section_iterator:
+            time_entry, prev_am_pm = self._create_time_entry(time_section, next(time_section_iterator), prev_am_pm)
+            if time_entry:
+                time_entries.append(time_entry)
+
+        return time_entries, daily_total
+
+    def _get_time_entries_when_headers_are_not_in_same_section_as_text(self, parent):
+        """
+            Get time entries when headers are not in the same section as text, 
+            returns tuple (time_entries, daily_total) 
+        """
+        time_entries = []
+        daily_total = ''
+        for sibling in parent.find_next_siblings('div', class_='section-outer-container'):
+            if sibling.select('.section-text-container h3'):
+                break # start a new day
+
+            time_section = sibling.find('div', class_='section-text')
+            if not time_section:
+                continue
+
+            daily_total_section = time_section.find('strong', string=re.compile(r'(Daily)?Total.*'))
+            if daily_total_section:
+                daily_total = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(daily_total_section))[0]
+
+            # Section, not always a single time entry at this point
+            time_sections_found = re.split(r'([\d]+[\:\.\d]*\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
+            if len(time_sections_found) < 3:
+                continue
+
+            time_section_iterator = iter(time_sections_found[1:])
+
+            prev_am_pm = 'am'
+            for time_section in time_section_iterator:
+                time_entry, prev_am_pm = self._create_time_entry(time_section, next(time_section_iterator), prev_am_pm)
+                if time_entry:
+                    time_entries.append(time_entry)
+
+        return time_entries, daily_total
+            
 
     def _create_time_entry(self, time_raw_str: str, body_str: str, default_am_pm: str):
         """ Create a time entry based on some text """
         money_spent = None
+        currency_str = ''
         if not time_raw_str or not body_str:
             return None
 
         body = BeautifulSoup(body_str, 'html.parser')
-        money_spent_section = body.find('strong')
+        strong_sections = body.findAll('strong')
+        for strong_section in strong_sections:
+            matches = re.match(r'(^[$€£]$)', strong_section.text)
+            if matches:
+                currency_str = strong_section.text
+                strong_section.decompose()
+            money_spent_section = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(strong_section))
+            if len(money_spent_section) > 0:
+                strong_section.decompose()
+                money_spent = currency_str + money_spent_section[0]
+                break            
 
-        if money_spent_section:
-            money_spent = money_spent_section.contents[0]
-            money_spent_section.decompose()
-
-        time_raw_str = time_raw_str.replace('.', '')
+        time_raw_str = time_raw_str.replace('.', '').strip()
         default_am_pm = 'am' if not default_am_pm else default_am_pm
 
         if not time_raw_str.endswith('m'):

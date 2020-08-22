@@ -249,8 +249,9 @@ class MoneyDiariesPageScraper(PageScraper):
             if daily_total_section:
                 daily_total = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(daily_total_section))[0]
 
+            test = time_section.decode_contents()
             # Section, not always a single time entry at this point
-            time_sections_found = re.split(r'([\d]+[\:\.\d]*\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
+            time_sections_found = re.split(r'(?:^|(?:\<br\/?\>))([\d]+[\:\.\d]*\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
             if len(time_sections_found) < 3:
                 continue
 

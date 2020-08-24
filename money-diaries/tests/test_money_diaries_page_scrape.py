@@ -1039,5 +1039,69 @@ class MoneyDiarySantaFeNewMexicoScrapeTest(unittest.TestCase):
         self.assertEqual(day_4_time_entries[2].time_of_day, datetime(year=1900, month=1, day=1, hour=7, minute=15))
 
 
+class MoneyDiaryPhillySeniorProgramManagerScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-philadelphia-senior-program-manager-salary.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'A Week In Philadelphia, PA, On A $106,000 Salary')
+        self.assertEqual(self.scrape.page_meta_data.author, 'You')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2017, 10, 3, 12, 0, 0))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'Senior Program Manager')
+        self.assertEqual(self.scrape.occupation_data.industry, 'Telecom')
+        self.assertEqual(self.scrape.occupation_data.location, 'Philadelphia')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '34', None), 
+            ('salary', '$106,000', '+ 15% bonus'),
+            ('paycheck (2x/month)', '$3,044.50', 'after tax'), 
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('housing costs', '$1,732', '/month for mortgage payment. I live alone, so all costs are mine.'), 
+                ('loan payments', '$0', 'my parents paid off my undergrad loans and are currently paying my grad school loans.'),
+                ('water, gas &amp; electric', '$150', None),
+                ('cable, internet &amp; home security', '$37.75', "I work for a cable company, so I only pay for equipment and taxes, but I have all the bells and whistles."),
+                ('lease payment', '$281', None),
+                ('house cleaner', '$100', None),
+                ('cell phone', '$137', ", including payment plan for my iPhone 7"),
+                ('exterminator', '$50', None),
+                ('gym', '$30', '(Does not include other classes that I buy as needed.)'),
+                ('savings', '$500', None),
+                ('car insurance', '$550', "every six months. (I don't factor it into my monthly bills. I just deal with it when the bill comes due.)"),
+            ])    
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '$158.43')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 4)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[0].description, "I live a little more than a mile from my office, so I usually take a bus in the morning and walk home in the evening. However, I am not a morning person and decide to Uber because I am running late. I Uber more often than I care to admit, but the $6.41 price point doesn't make me feel too guilty. I run to Wawa to grab a coffee before going into my office building. I used to make coffee at home everyday, but it started to become too difficult to navigate the travel mug on crowded city buses. I forgot to pack breakfast on my way out the door, so I also get fresh fruit, bringing my breakfast total to $5.53.")
+        self.assertEqual(day_0_time_entries[0].money_spent, '$11.94')
+        self.assertEqual(day_0_time_entries[0].time_of_day, datetime(year=1900, month=1, day=1, hour=9, minute=0))
+
+        self.assertEqual(self.scrape.days_data[1].title, 'Day Two')
+        self.assertEqual(self.scrape.days_data[1].total, '$276.34')
+        self.assertEqual(len(self.scrape.days_data[1].time_entries), 5)
+
+        day_2_time_entries = self.scrape.days_data[1].time_entries
+        self.assertEqual(day_2_time_entries[4].description, "After debating going out, I pour a glass of wine and veg on the couch. I haven't been home a lot lately, so it feels good to just be here. I finally finish a book I've been trying to get through before turning the lights out at 11:30.")
+        self.assertEqual(day_2_time_entries[4].money_spent, None)
+        self.assertEqual(day_2_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=19, minute=30))
+
+
+
 if __name__ == '__main__':
     unittest.main()

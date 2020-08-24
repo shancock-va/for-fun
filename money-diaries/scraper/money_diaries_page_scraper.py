@@ -97,6 +97,7 @@ class MoneyDiariesPageScraper(PageScraper):
                 is_costs = len(re.findall(r'(\w*\scosts)', monthly_expense_label_section.text)) > 0
                 if is_costs:
                     section_str = str(monthly_expense_label_section.parent)
+                    monthly_expense_label_section.parent.decompose()
                 elif siblings and monthly_expense_label_section.previousSibling is None:
                     monthly_expense_label_section.decompose()
                     section_str = str(section)
@@ -104,15 +105,18 @@ class MoneyDiariesPageScraper(PageScraper):
                     parent = monthly_expense_label_section.find_parent('div', class_='section-outer-container')
                     if parent.find('strong', string=re.compile(r'Industry:?\s?')):
                         # Expenses and Occupation data are not well separated
-                        contents = parent.findChildren('div', class_='section-text')[0].contents
+                        child = parent.findChildren('div', class_='section-text')[0]
+                        contents = child.contents
                         section_str = re.findall(r'\<strong\>Monthly Expenses:?\s?\<\/strong\>(.*)', ''.join(map(str, contents)))[0]
+                        child.decompose()
                     else:
                         sibling = parent.find_next_siblings('div', class_='section-outer-container')
                         content = sibling[0].findChildren('div', class_='section-text')
                         section_str = str(content[0])
+                        content[0].decompose()
 
-                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?~?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', section_str)
-                break
+                pairs += re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?~?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', section_str)
+                #break
         
         expenses = []
         for pair in pairs:

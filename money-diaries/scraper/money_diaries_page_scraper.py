@@ -62,6 +62,7 @@ class MoneyDiariesPageScraper(PageScraper):
         pairs = []
         for section in section_texts:
             if section.find('strong', string=re.compile(r'Occupation:\s')) or section.find('strong', string=re.compile(r'(Industry)|(Occuptation):\s')):
+                self._clear_empty_strongs(section)
                 sub_section = re.split(r'\<strong\>Monthly Expenses:?\s?\<\/strong\>', str(section))
                 pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', sub_section[0])
                 break
@@ -100,6 +101,7 @@ class MoneyDiariesPageScraper(PageScraper):
                     monthly_expense_label_section.parent.decompose()
                 elif siblings and monthly_expense_label_section.previousSibling is None:
                     monthly_expense_label_section.decompose()
+                    self._clear_empty_strongs(section)
                     section_str = str(section)
                 else:
                     parent = monthly_expense_label_section.find_parent('div', class_='section-outer-container')
@@ -115,8 +117,7 @@ class MoneyDiariesPageScraper(PageScraper):
                         section_str = str(content[0])
                         content[0].decompose()
 
-                pairs += re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?~?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', section_str)
-                #break
+                pairs += re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?~?([$€£\d\-]{1,}(?:[\,\.]?\d+)*%?)?[\.\s]*(.*?)(?:<|\Z)', section_str)
         
         expenses = []
         for pair in pairs:
@@ -159,18 +160,16 @@ class MoneyDiariesPageScraper(PageScraper):
         days = []
         for section in day_sections:
             time_entries = []
-            strong_matches = re.findall(r'<strong>(.*?)<\/strong>', str(section))
+            strong_matches = re.findall(r'<strong>(.*?)(?:<br>)?<\/strong>', str(section))
 
-            matches = re.findall(r'<br>([\d\.\:]{1,5}[ap]m):\s?(.*?)([$€£\d\-]{1,}[\,\.]?\d+)?\s?<br>', str(section))
+            matches = re.findall(r'<br>([\d\.\:]{1,5}\s?[ap].?m.?)\s?[:\—]\s?(.*?)(?:\<strong\>)?([$€£\d\-]{1,}[\,\.]?\d+)?\s*(?:\<\/strong\>)?\s?<br>', str(section))
 
             for match in matches:
                 time_str = match[0]
                 descr = match[1] if match[1] else None
                 money_spent = match[2] if match[2] else None
-                if "." in time_str:
-                    time_of_day = datetime.strptime(time_str, "%I.%M%p")
-                else:
-                    time_of_day = datetime.strptime(time_str, "%I%p")
+                
+                time_of_day = self._get_time_from_string(time_str)
 
                 time_entries.append(TimeEntry(
                         time_of_day=time_of_day, 
@@ -181,7 +180,7 @@ class MoneyDiariesPageScraper(PageScraper):
             days.append(
                 Day(
                     title=strong_matches[0].strip() if len(strong_matches) > 1 else None,
-                    total=strong_matches[-1].replace('Total: ', '').strip() if len(strong_matches) > 1 else None,
+                    total=re.sub(r'(Daily)?\s?[Tt]otal:\s?', '', strong_matches[-1]).strip() if len(strong_matches) > 1 else None,
                     time_entries=time_entries
                 )
             )
@@ -215,7 +214,7 @@ class MoneyDiariesPageScraper(PageScraper):
         time_section = parent.find('div', class_='section-text')
         strong_sections = time_section.findAll('strong')
         for strong_section in strong_sections:
-            daily_total_section = re.findall(r'((?:Daily\s)?Total.*)', str(strong_section))
+            daily_total_section = re.findall(r'((?:Daily\s)?[Tt]otal.*)', str(strong_section))
             if len(daily_total_section) > 0:
                 break
 
@@ -249,11 +248,11 @@ class MoneyDiariesPageScraper(PageScraper):
             if not time_section:
                 continue
 
-            daily_total_section = time_section.find('strong', string=re.compile(r'(Daily)?Total.*'))
+            daily_total_section = time_section.find('strong', string=re.compile(r'(Daily)?[Tt]otal.*'))
             if daily_total_section:
                 daily_total = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(daily_total_section))[0]
 
-            test = time_section.decode_contents()
+            time_section.decode_contents()
             # Section, not always a single time entry at this point
             time_sections_found = re.split(r'(?:^|(?:\<br\/?\>))([\d]+[\:\.\d]*\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
             if len(time_sections_found) < 3:
@@ -290,24 +289,42 @@ class MoneyDiariesPageScraper(PageScraper):
                 money_spent = currency_str + money_spent_section[0]
                 break            
 
-        time_raw_str = time_raw_str.replace('.', '').strip()
-        default_am_pm = 'am' if not default_am_pm else default_am_pm
-
-        if not time_raw_str.endswith('m'):
-            time_raw_str += f" {default_am_pm}"
-        else:
-            default_am_pm = time_raw_str[-2:]
-
-        if ":" in time_raw_str:
-            time_of_day = datetime.strptime(time_raw_str, "%I:%M %p")
-        else:
-            try:
-                time_of_day = datetime.strptime(time_raw_str, "%I %p")
-            except ValueError:
-                time_of_day = datetime.strptime(time_raw_str, "%I%M %p")
+        time_of_day = self._get_time_from_string(time_raw_str, default_am_pm)
 
         return (TimeEntry(
                         time_of_day=time_of_day, 
                         description=body.text.strip(), 
                         money_spent=money_spent
                     ), default_am_pm)
+
+    
+    def _get_time_from_string(self, time_str: str, default_am_pm: str='am'):
+        """
+        Get's time from string, returns a datetime
+        """
+
+        time_str = time_str.replace('.', '').strip().replace(' ', '')
+        default_am_pm = 'am' if not default_am_pm else default_am_pm
+
+        if not time_str.endswith('m'):
+            time_str += f"{default_am_pm}"
+        else:
+            default_am_pm = time_str[-2:]
+
+        if ":" in time_str:
+            return datetime.strptime(time_str, "%I:%M%p")
+        else:
+            try:
+                return datetime.strptime(time_str, "%I%p")
+            except ValueError:
+                return datetime.strptime(time_str, "%I%M%p")
+        return None
+
+
+    def _clear_empty_strongs(self, element):
+        """ For some reason there are empty <strong></strong> elements.
+            This messes with the regex. Find them and clear them """
+        empty_strongs = element.findAll('strong', string=re.compile(r'\s?'))
+        for empty_strong in empty_strongs:
+            if empty_strong.text.strip() in ['', '~']:
+                empty_strong.decompose()

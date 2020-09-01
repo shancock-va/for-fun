@@ -9,6 +9,38 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'scraper'))
 
 from money_diaries_page_scraper import MoneyDiariesPageScraper
 
+class ScrapeGetTimeFromStringTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+
+    def test__get_time_from_string_parses_pm(self):
+        result = self.scrape._get_time_from_string('930 pm')
+        self.assertEqual(result, datetime(1900, 1, 1, 21, 30, 0))
+
+    def test__get_time_from_string_parses_am(self):
+        result = self.scrape._get_time_from_string('930 am')
+        self.assertEqual(result, datetime(1900, 1, 1, 9, 30, 0))
+
+    def test__get_time_from_string_parses_am_with_periods(self):
+        result = self.scrape._get_time_from_string('930 a.m.')
+        self.assertEqual(result, datetime(1900, 1, 1, 9, 30, 0))
+
+    def test__get_time_from_string_parses_time_with_colon(self):
+        result = self.scrape._get_time_from_string('9:30 a.m.')
+        self.assertEqual(result, datetime(1900, 1, 1, 9, 30, 0))
+
+    def test__get_time_from_string_parses_time_with_missing_am_pm(self):
+        result = self.scrape._get_time_from_string('9:30', 'am')
+        self.assertEqual(result, datetime(1900, 1, 1, 9, 30, 0))
+
+    def test__get_time_from_string_parses_time_without_minutes(self):
+        result = self.scrape._get_time_from_string('9 a.m.')
+        self.assertEqual(result, datetime(1900, 1, 1, 9, 0, 0))
+
+    def test__get_time_from_string_parses_time_without_spaces(self):
+        result = self.scrape._get_time_from_string('9a.m.')
+        self.assertEqual(result, datetime(1900, 1, 1, 9, 0, 0))
+
 
 class MoneyDiariesPageScraperTest(unittest.TestCase):
     def setUp(self):
@@ -952,7 +984,7 @@ class MoneyDiarySalesExecutiveIrvineScrapeTest(unittest.TestCase):
                 ('libro.fm', '$14.99', "(It's like Audible, but supports independent bookstores.)"),
                 ('netflix', '$0', "(I use my boyfriend's account.)"),
                 ('classpass', '$79', "(My work covers $75 of it, though, so I only pay $4.)"),
-                ('401(k)', '4', '% of each paycheck'),
+                ('401(k)', '4%', 'of each paycheck'),
             ])    
 
     def test__set_days_data(self):
@@ -1100,6 +1132,70 @@ class MoneyDiaryPhillySeniorProgramManagerScrapeTest(unittest.TestCase):
         self.assertEqual(day_2_time_entries[4].description, "After debating going out, I pour a glass of wine and veg on the couch. I haven't been home a lot lately, so it feels good to just be here. I finally finish a book I've been trying to get through before turning the lights out at 11:30.")
         self.assertEqual(day_2_time_entries[4].money_spent, None)
         self.assertEqual(day_2_time_entries[4].time_of_day, datetime(year=1900, month=1, day=1, hour=19, minute=30))
+
+
+class MoneyDiaryWashingtonFinanceSalaryScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-washington-dc-finance-salary.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'A Week In Washington, D.C. On An $89,000 Salary')
+        self.assertEqual(self.scrape.page_meta_data.author, 'You')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2016, 12, 20, 16, 30, 0))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, None)
+        self.assertEqual(self.scrape.occupation_data.industry, 'Finance')
+        self.assertEqual(self.scrape.occupation_data.location, 'Washington, D.C.')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '27', None), 
+            ('salary', '$89,000', '+ ~20% annual bonus, discretionary profit sharing and additional potential annual bonus pools'),
+            ('paycheck amount (bimonthly)', '$3,708', '2x/month, down to $2,184 after tax, insurance, 401K, and Metro card load'), 
+            ('# of roommates', '1', ', a friend'), 
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('rent', '$3,300', '/month total, $1,550 is my share (ugh DC rent)'), 
+                ('credit cards', None, 'Varies, but always paid in full every month'),
+                ('loan payments', '$0', ', my parents graciously paid for my school as long as I maintained good grades and stayed in state (Michigan)'),
+                ('utilities', None, 'I pay cable/internet, ~$150/month, my roommate pays electric (water is covered) – the bills generally even out-ish, so we’re pretty bad at actually sitting down to divide it up.'),
+                ('phone bill', '$75', "/month to my parents, still on the family plan to save $$!"),
+                ('health insurance', '$150', "/month pretax for health, vision and dental, comes directly out of my paycheck"),
+                ('transportation', '$50', "/month pretax to my Metro card, comes directly out of my paycheck."),
+                ('long distance tax', '$75', "/month on trains to see my boyfriend in Philadelphia; we try to see each other every 2 weeks, so we generally each buy 1 trip/month."),
+                ('savings', '12.5%', 'to my 401K each paycheck, matched at 4% by work. Also save ~$2,000/month that eventually goes toward investing when I think the markets look good. I have about $190,000 saved between my brokerage account, checking/savings, 401k, and an IRA from my previous job.'),
+                ('gym', '$0', "Outside, or free gym at work. I got an amazing deal for $1 for a month of Class Pass, but that just wrapped up. Loved the classes, but not sure if I’ll want to pay full price for it. TBD."),
+                ('netflix', '$0', "Thanks boyfriend!"),
+            ])    
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day 1')
+        self.assertEqual(self.scrape.days_data[0].total, '$32.93')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 9)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[2].description, "Coffee! Free from the office and I keep my favorite French Vanilla creamer in the fridge. I think it’s kind of silly to pay for coffee when it’s free at work, so I only go to Starbucks once a year for my free birthday drink. We also have a client that makes coffee machines and gifts them to us, so we can make literally anything — espresso, cappuccino, lattes, iced coffee, tea, you name it.")
+        self.assertEqual(day_0_time_entries[2].money_spent, None)
+        self.assertEqual(day_0_time_entries[2].time_of_day, datetime(year=1900, month=1, day=1, hour=10, minute=0))
+
+        self.assertEqual(self.scrape.days_data[5].title, 'Day 6')
+        self.assertEqual(self.scrape.days_data[5].total, '$33.25')
+        self.assertEqual(len(self.scrape.days_data[5].time_entries), 9)
+
+        day_time_entries = self.scrape.days_data[5].time_entries
+        self.assertEqual(day_time_entries[5].description, "Head out to meet with book club! We’re meeting at a restaurant to discuss Amy Schumer’s book, but not until 7:30, so I decide to go to the Brazilian steakhouse across the street for happy hour. I sit at the bar and order a caipirinha and a sampler plate of three meats. I don’t know if this is how it usually is, but I was given about six times more food than what I ordered. The bartender and manager just kept being like, “Would you like to try 'X' as well?” Never one to turn down food, I end up with mashed potatoes, cheese-stuffed bread, deep-fried plantains, and SIX extra kinds of meat! It is all insanely good. My friend later said maybe they thought I was a food critic?! Somehow, this nine pounds of food I ate \"for an appetizer\" and the drink come to $19.25. I tip extra for the excellent experience and make a mental note to give this place 5 stars on Yelp.")
+        self.assertEqual(day_time_entries[5].money_spent, '$24.25')
+        self.assertEqual(day_time_entries[5].time_of_day, datetime(year=1900, month=1, day=1, hour=18, minute=0))
 
 
 

@@ -1199,7 +1199,7 @@ class MoneyDiaryWashingtonFinanceSalaryScrapeTest(unittest.TestCase):
         self.assertEqual(day_time_entries[5].time_of_day, datetime(year=1900, month=1, day=1, hour=18, minute=0))
 
 
-class MoneyDiaryWashingtonFinanceSalaryScrapeTest(unittest.TestCase):
+class MoneyDiaryFurloughedGovermentEmployeeScrapeTest(unittest.TestCase):
     def setUp(self):
         self.scrape = MoneyDiariesPageScraper('local.money-diaries')
         with open('{}/tests/content/money-diary-of-a-furloughed-government-employee.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
@@ -1260,6 +1260,69 @@ class MoneyDiaryWashingtonFinanceSalaryScrapeTest(unittest.TestCase):
         self.assertEqual(day_time_entries[5].time_of_day, datetime(year=1900, month=1, day=1, hour=19, minute=0))
 
 
+class MoneyDiaryFurloughedGovermentEmployeeScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-st-paul-minnesota-disability.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'A Week In St. Paul, MN, On Disability')
+        self.assertEqual(self.scrape.page_meta_data.author, 'You')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2018, 8, 8, 13, 0, 0))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'On Disability')
+        self.assertEqual(self.scrape.occupation_data.industry, None)
+        self.assertEqual(self.scrape.occupation_data.location, 'St. Paul, MN')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '30', None), 
+            ('salary', '$25,000', "for disability (It was $32,000 before I became disabled.)"),
+            ('disability check (weekly)', '$367', None), 
+            ("husband’s part-time paycheck (weekly)", '$120', '(He is also a student.)')
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('mortgage', '$1,015', '(I live in a modest house with my husband and two kids.)'), 
+                ('student loan payment', '$0', "(I'm on an income-based repayment plan.)"),
+                ('cell phone', '$0', '(My in-laws cover us on their family plan. Thanks, in-laws!)'),
+                ('internet', '$44', None),
+                ('ooma internet phone', '$5', None),
+                ('utilities', '$260', None),
+                ('car payment', '$148', None),
+                ('gym membership', "$60", "(We have a 50% scholarship.)"),
+                ('preschool', "$0", "(Thanks to a scholarship.)"),
+                ('after-school care', "$140", None),
+                ('credit cards', "$350", "(We earn less than our expenses, so we have significant debt. It sucks.)"),
+                ('savings', None, "Ummmmm, yeah right."),
+            ])    
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '$221.97')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 7)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[3].description, "I stop by Play it Again Sports to get my kids’ skates sharpened. I bought a credit for 10 sharpenings last year. I also get skate blade covers because I got cut trying to get the skates on my three-year-old last week.")
+        self.assertEqual(day_0_time_entries[3].money_spent, "$27.80")
+        self.assertEqual(day_0_time_entries[3].time_of_day, datetime(year=1900, month=1, day=1, hour=12, minute=0))
+
+        self.assertEqual(self.scrape.days_data[3].title, 'Day Four')
+        self.assertEqual(self.scrape.days_data[3].total, '$58.93')
+        self.assertEqual(len(self.scrape.days_data[3].time_entries), 3)
+
+        day_time_entries = self.scrape.days_data[3].time_entries
+        self.assertEqual(day_time_entries[1].description, "Feeling calmer, I felt brave and go to Target. We needed a few groceries (granola, yogurt, milk, cheese sticks) and distilled water for humidifiers. I also buy a number of Captain America toys for my three-year-old, who just pooped in the potty, and a surprise for my daughter, who had a hard time taking her antibiotics. (Nope, not above bribing.) We had a couple gift cards leftover from Christmas, so even though my total is over $150, I only spend $28.78 in the end.")
+        self.assertEqual(day_time_entries[1].money_spent, '$28.78')
+        self.assertEqual(day_time_entries[1].time_of_day, datetime(year=1900, month=1, day=1, hour=14, minute=30))
 
 
 if __name__ == '__main__':

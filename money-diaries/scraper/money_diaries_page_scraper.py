@@ -61,7 +61,7 @@ class MoneyDiariesPageScraper(PageScraper):
         section_texts = self.soup.findAll('div', class_='section-text')
         pairs = []
         for section in section_texts:
-            if section.find('strong', string=re.compile(r'Occupation:\s')) or section.find('strong', string=re.compile(r'(Industry)|(Occuptation):\s')):
+            if section.find('strong', string=re.compile(r'Occupation:\s?')) or section.find('strong', string=re.compile(r'(Industry)|(Occuptation):\s')):
                 self._clear_empty_strongs(section)
                 sub_section = re.split(r'\<strong\>Monthly Expenses:?\s?\<\/strong\>', str(section))
                 pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', sub_section[0])
@@ -195,7 +195,7 @@ class MoneyDiariesPageScraper(PageScraper):
         for section in day_sections:
             parent = section.find_parent('div', class_='section-outer-container')
             
-            if len(parent.text) > 11: # " Day Three "
+            if len(parent.text) > 11: # Looking for something like " Day Three "
                 time_entries, daily_total = self._get_time_entries_when_headers_are_in_same_section_as_text(parent)
             else:
                 time_entries, daily_total = self._get_time_entries_when_headers_are_not_in_same_section_as_text(parent)
@@ -259,7 +259,7 @@ class MoneyDiariesPageScraper(PageScraper):
 
             time_section.decode_contents()
             # Section, not always a single time entry at this point
-            time_sections_found = re.split(r'(?:^|(?:\<br\/?\>))([\d]+[\:\.\d]*\s(?:[ap]\.?m\.?)?)\s*—\s*', time_section.decode_contents())
+            time_sections_found = re.split(r'(?:^|(?:\<br\/?\>))([\d]+[\:\.\d]*\s(?:[ap]\.?m\.?)?)\s*—?\s*', time_section.decode_contents())
             if len(time_sections_found) < 3:
                 continue
 

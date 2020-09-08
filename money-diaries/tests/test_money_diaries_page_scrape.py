@@ -9,6 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'scraper'))
 
 from money_diaries_page_scraper import MoneyDiariesPageScraper
 
+
 class ScrapeGetTimeFromStringTest(unittest.TestCase):
     def setUp(self):
         self.scrape = MoneyDiariesPageScraper('local.money-diaries')
@@ -1196,6 +1197,68 @@ class MoneyDiaryWashingtonFinanceSalaryScrapeTest(unittest.TestCase):
         self.assertEqual(day_time_entries[5].description, "Head out to meet with book club! We’re meeting at a restaurant to discuss Amy Schumer’s book, but not until 7:30, so I decide to go to the Brazilian steakhouse across the street for happy hour. I sit at the bar and order a caipirinha and a sampler plate of three meats. I don’t know if this is how it usually is, but I was given about six times more food than what I ordered. The bartender and manager just kept being like, “Would you like to try 'X' as well?” Never one to turn down food, I end up with mashed potatoes, cheese-stuffed bread, deep-fried plantains, and SIX extra kinds of meat! It is all insanely good. My friend later said maybe they thought I was a food critic?! Somehow, this nine pounds of food I ate \"for an appetizer\" and the drink come to $19.25. I tip extra for the excellent experience and make a mental note to give this place 5 stars on Yelp.")
         self.assertEqual(day_time_entries[5].money_spent, '$24.25')
         self.assertEqual(day_time_entries[5].time_of_day, datetime(year=1900, month=1, day=1, hour=18, minute=0))
+
+
+class MoneyDiaryWashingtonFinanceSalaryScrapeTest(unittest.TestCase):
+    def setUp(self):
+        self.scrape = MoneyDiariesPageScraper('local.money-diaries')
+        with open('{}/tests/content/money-diary-of-a-furloughed-government-employee.html'.format(os.path.join(os.path.dirname(__file__), os.pardir)), 'r') as f:
+            self.scrape.content = f.read()
+        self.scrape._get_page_soup()
+
+    def test__set_meta_data_sets_data(self):
+        self.scrape._set_meta_data()
+        self.assertEqual(self.scrape.page_meta_data.title, 'A Week In San Diego As A Furloughed Government Employee')
+        self.assertEqual(self.scrape.page_meta_data.author, 'You')
+        self.assertEqual(self.scrape.page_meta_data.publish_date, datetime(2019, 1, 22, 17, 0, 0))
+
+    def test__set_occupation_data_sets_data(self):
+        self.scrape._set_occupation_data()
+        self.assertEqual(self.scrape.occupation_data.occupation, 'Lawyer (currently furloughed)')
+        self.assertEqual(self.scrape.occupation_data.industry, 'Government')
+        self.assertEqual(self.scrape.occupation_data.location, 'San Diego, CA')
+        self.assertEqual(self.scrape.occupation_data.extras, [
+            ('age', '32', None), 
+            ('salary', '$125,000', "(My fiancé's salary is $110,000.)"),
+            ('paycheck amount (biweekly)', '$0', None), 
+            ])
+
+    def test__set_expense_data_sets_data(self):
+        self.scrape._set_expenses_data()
+        self.assertEqual(self.scrape.expense_data.expenses, [
+                ('rent', '$1,090', '(my half)'), 
+                ('cell/internet/cable', '$110', '(my half)'),
+                ('utilities', '$100-$200', '(my half)'),
+                ('netflix/spotify', '$13', '(my half)'),
+                ('hulu', '$0.50', "(This is not a typo. L. found a Black Friday deal for Hulu with commercials for $1 per month.)"),
+                ('car insurance', '$45', None),
+                ('student loans', '$1,054', None),
+                ('charity, union dues, health insurance &amp; 401(k)', None, "Currently suspended"),
+                ('savings', None, "I haven’t had to pull anything out yet, but I will need to start dipping into it at the end of the month when rent is due."),
+            ])    
+
+    def test__set_days_data(self):
+        self.scrape._set_days_data()
+        self.assertEqual(len(self.scrape.days_data), 7)
+
+        self.assertEqual(self.scrape.days_data[0].title, 'Day One')
+        self.assertEqual(self.scrape.days_data[0].total, '$35.09')
+        self.assertEqual(len(self.scrape.days_data[0].time_entries), 5)
+
+        day_0_time_entries = self.scrape.days_data[0].time_entries
+        self.assertEqual(day_0_time_entries[2].description, "I make myself a ham and cheese sandwich and cut up an apple. L. and I work out a meal plan for the week and a shopping list of what we need. I'm trying to use up what we have in the pantry, so I try to plan some of our meals around that. At the store, we get chicken, avocados, olive oil, butter, eggs, apples, bananas, cottage cheese, pasta, canned pineapple, broccoli, carrots, cereal, protein bars, and cheese ($20.41 for my half on our joint card).")
+        self.assertEqual(day_0_time_entries[2].money_spent, "$20.41")
+        self.assertEqual(day_0_time_entries[2].time_of_day, datetime(year=1900, month=1, day=1, hour=12, minute=0))
+
+        self.assertEqual(self.scrape.days_data[5].title, 'Day Six')
+        self.assertEqual(self.scrape.days_data[5].total, '$30.50')
+        self.assertEqual(len(self.scrape.days_data[5].time_entries), 7)
+
+        day_time_entries = self.scrape.days_data[5].time_entries
+        self.assertEqual(day_time_entries[5].description, "For dinner I make chicken parmesan from Skinnytaste. I love her recipes and this is one of L.’s favorites. I settle in to read The Remains of the Day, which I am so close to finishing. I bought it in October, but set it aside for a couple of months for other books. It is beautifully written, but I find the protagonist very frustrating.")
+        self.assertEqual(day_time_entries[5].money_spent, None)
+        self.assertEqual(day_time_entries[5].time_of_day, datetime(year=1900, month=1, day=1, hour=19, minute=0))
+
 
 
 

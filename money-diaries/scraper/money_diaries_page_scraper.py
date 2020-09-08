@@ -77,6 +77,8 @@ class MoneyDiariesPageScraper(PageScraper):
                 break
             elif pair[0] == 'Occupation':
                 occupation = pair[2].strip()
+            elif pair[0] == 'Job':
+                occupation = pair[2].strip()
             elif pair[0] == 'Industry':
                 industry = pair[2].strip()
             elif pair[0] == 'Location':
@@ -248,9 +250,12 @@ class MoneyDiariesPageScraper(PageScraper):
             if not time_section:
                 continue
 
-            daily_total_section = time_section.find('strong', string=re.compile(r'(Daily)?[Tt]otal.*'))
+            daily_total_section = time_section.find_all('strong')
             if daily_total_section:
-                daily_total = re.findall(r'([$€£\d\-]{1,}[\,\.]?\d+)', str(daily_total_section))[0]
+                daily_total_section_str = ' '.join([strong_section.decode_contents() for strong_section in daily_total_section])
+                found_daily_totals = re.findall(r'Daily?\s?[Tt]otal:\s?([$€£\d\-]{1,}[\,\.]?\d+)', daily_total_section_str)
+                if found_daily_totals:
+                    daily_total = found_daily_totals[0]
 
             time_section.decode_contents()
             # Section, not always a single time entry at this point

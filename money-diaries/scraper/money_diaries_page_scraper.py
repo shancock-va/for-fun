@@ -64,7 +64,7 @@ class MoneyDiariesPageScraper(PageScraper):
             if section.find('strong', string=re.compile(r'Occupation:\s?')) or section.find('strong', string=re.compile(r'(Industry)|(Occuptation):\s')):
                 self._clear_empty_strongs(section)
                 sub_section = re.split(r'\<strong\>Monthly Expenses:?\s?\<\/strong\>', str(section))
-                pairs = re.findall(r'\<strong\>(.*?):?\s?\<\/strong\>:?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', sub_section[0])
+                pairs = re.findall(r'((?:\<strong\>.*?:?\s?\<\/strong\>\s?)+):?\s?([$€£\d\-]{1,}(?:[\,\.]?\d+)*)?[\.\s]*(.*?)(?:<|\Z)', sub_section[0])
                 break
 
         occupation = None
@@ -73,18 +73,20 @@ class MoneyDiariesPageScraper(PageScraper):
         extras = []
 
         for pair in pairs:
-            if 'monthly expenses' in pair[0].lower() or 'costs' in pair[0].lower():
+            label = re.sub(r'\<\/?strong\>', '', pair[0]).replace(':', '').strip()
+            
+            if 'monthly expenses' in label.lower() or 'costs' in label.lower():
                 break
-            elif pair[0] == 'Occupation':
+            elif label == 'Occupation':
                 occupation = pair[2].strip()
-            elif pair[0] == 'Job':
+            elif label == 'Job':
                 occupation = pair[2].strip()
-            elif pair[0] == 'Industry':
+            elif label == 'Industry':
                 industry = pair[2].strip()
-            elif pair[0] == 'Location':
+            elif label == 'Location':
                 location = pair[2].strip()
             else:
-                label, value, descr = (None if item == '' or item is None else item.strip() for item in pair)
+                value, descr = (None if item == '' or item is None else item.strip() for item in pair[1:])
                 extras.append((label.lower(), value, descr))
 
         self.occupation_data = OccupationData(occupation, industry, location, extras)

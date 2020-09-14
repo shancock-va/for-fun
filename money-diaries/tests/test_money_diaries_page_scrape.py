@@ -93,7 +93,7 @@ class MoneyDiariesPageScraperToJsonTest(unittest.TestCase):
         result_dict = json.loads(result)
         self.assertListEqual(result_dict['expense_data']['expenses'], [list(tup) for tup in expense_data.expenses])
     
-    def test_to_json_encodes_expense_data(self):
+    def test_to_json_encodes_days_data(self):
         days = [
             Day(
                 'Day 1',

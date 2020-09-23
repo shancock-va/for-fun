@@ -15,17 +15,25 @@ from money_diaries_model import PageMetaData, OccupationData, ExpensesData, Time
 
 class MoneyDiariesPageScraper(PageScraper):
     """ Scrape a Money Diaries page """
-    def __init__(self, url, selenium_driver=None, selenium_wait_until=None):
+    def __init__(self, url, selenium_driver=None, selenium_wait_until=None, content_location='./data'):
         """ Initiate the class """
         self.page_meta_data = None
         self.occupation_data = None
         self.expense_data = None
         self.days_data = None
-        PageScraper.__init__(self, url, selenium_driver)
+        PageScraper.__init__(
+            self,
+            url,
+            selenium_driver=selenium_driver,
+            selenium_wait_until=selenium_wait_until,
+            content_location=content_location
+        )
 
-    def scrape_page(self):
+    def scrape_page(self, write_contents_to_file=False):
         """ Scrapes page and sets content and parse it using Beautiful Soup """
         self._get_page_contents()
+        if write_contents_to_file:
+            self._write_contents_to_file()
         self._get_page_soup()
         self._set_meta_data()
         self._set_occupation_data()

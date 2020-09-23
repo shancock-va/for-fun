@@ -1,6 +1,7 @@
 """
 Classes related to scraping a website
 """
+import os
 import requests
 import unicodedata
 
@@ -13,12 +14,14 @@ from money_diaries_model import PageMetaData, OccupationData, ExpensesData, Time
 
 class PageScraper:
     """ Scrape a page """
-    def __init__(self, url, selenium_driver=None, selenium_wait_until=None):
+    def __init__(self, url, selenium_driver=None, selenium_wait_until=None, content_location='./data'):
         """ Initiate the class """
         self.url = url
         self.use_selenium = None
         self.content = None
         self.soup = None
+        self.html_file_location = None
+        self.content_location = content_location
         self.driver = selenium_driver
         self.selenium_wait_until = selenium_wait_until
 
@@ -35,6 +38,17 @@ class PageScraper:
         else:
             self.content = unicodedata.normalize("NFKD", requests.get(self.url).content.decode("utf-8"))
         return self.content
+
+    def _write_contents_to_file(self):
+        """ Write scraped contents to file """
+        try:
+            os.makedirs(self.content_location)
+        except FileExistsError:
+            pass
+        
+        self.html_file_location = "{}/{}.html".format(self.content_location, self.url.split("/")[-1])
+        with open(self.html_file_location, "w") as text_file:
+            text_file.write(self.content) 
 
     def _get_page_soup(self, parser='html.parser'):
         """ Returns beautiful soup representation of the page """

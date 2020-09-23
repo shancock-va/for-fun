@@ -1,6 +1,7 @@
 import logging
 import os
 from queue import Queue, Empty
+import random
 import sys
 import traceback
 import time
@@ -25,11 +26,14 @@ def site_map_worker(sitemaps_queue, url_queue, thread_number):
             sitemap_scrape = MoneyDiariesSiteMapScaper(sitemap_url)
             sitemap_scrape.scrape_page()
 
-            for url in sitemap_scrape.additional_site_map_urls[0:50]:
+            random.shuffle(sitemap_scrape.additional_site_map_urls)
+            for url in sitemap_scrape.additional_site_map_urls[0:10]:
                 sitemaps_queue.put(url)
 
             for url in sitemap_scrape.get_money_diary_page_urls():
-                url_queue.put(url)
+                if url.startswith('https://www.refinery29.com/en-'):
+                    url_queue.put(url)
+                # else it is a non english site
             
             sitemaps_queue.task_done()
         except Empty:
@@ -46,10 +50,14 @@ def page_worker(url_queue, scraped_sites_queue, thread_number):
             scraper = MoneyDiariesPageScraper(
                             url,
                             selenium_driver=driver,
-                            selenium_wait_until=EC.visibility_of_element_located((By.CSS_SELECTOR, "div.byline.modified a"))
+                            selenium_wait_until=EC.visibility_of_element_located((By.CSS_SELECTOR, "div.byline.modified a")),
+                            content_location='./money-diaries/data'
                         )
-            scraper.scrape_page()
-            
+            try:
+                scraper.scrape_page(write_contents_to_file=True)
+            except:
+                tb = traceback.format_exc()
+                print("Unexpected scraping on {}:\n{}".format(url, tb))
             scraped_sites_queue.put(scraper)
 
             url_queue.task_done()
@@ -58,10 +66,7 @@ def page_worker(url_queue, scraped_sites_queue, thread_number):
         except:
             #handle all other exceptions and write scraping contents to disk
             tb = traceback.format_exc()
-            print("Unexpected error:\n{}".format(tb))
-            if scraper.content:
-                with open("{}.html".format(url.split("/")[-1]), "w") as text_file:
-                    text_file.write(scraper.content)
+            print("Unexpected error on {}:\n{}".format(url, tb))
 
     driver.quit()
 
@@ -86,7 +91,7 @@ def money_diaries_site_map_scrape():
     print("--- Sitemaps scraped in %s seconds ---" % (time.time() - start_time))
     print("Urls queued to be scraped %s " % len(list(url_queue.queue)))
 
-    for thread_number in range(1):
+    for thread_number in range(2):
         worker = Thread(target=page_worker, args=(url_queue, scraped_sites_queue, thread_number))
         worker.setDaemon(True)
         worker.start()

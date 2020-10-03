@@ -3,9 +3,7 @@ import sys
 import unittest
 from unittest import mock
 
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'scraper'))
-
-from money_diaries_site_map_scraper import MoneyDiariesSiteMapScaper
+from scraper.money_diaries_site_map_scraper import MoneyDiariesSiteMapScaper
 
 class MoneyDiariesSiteMapScaperTest(unittest.TestCase):
     def test__set_site_map_urls_sets_additional_site_map_urls(self):

@@ -44,56 +44,53 @@ class ScrapeGetTimeFromStringTest(unittest.TestCase):
         self.assertEqual(result, datetime(1900, 1, 1, 9, 0, 0))
 
 
-class MoneyDiariesPageScraperToJsonTest(unittest.TestCase):
+class MoneyDiariesPageScraperToDictTest(unittest.TestCase):
     def setUp(self):
         self.scrape = MoneyDiariesPageScraper('local.money-diaries')
     
-    def test_to_json_encodes_meta_data(self):
+    def test_to_json_serializable_obj_encodes_meta_data(self):
         self.scrape.title = 'My title'
         self.scrape.author = 'Author'
         self.scrape.publish_date = datetime(2020, 10, 5, 14, 30, 0)
 
-        result = self.scrape.to_json()
-        result_dict = json.loads(result)
+        result_dict = self.scrape.to_json_serializable_obj()
         self.assertEqual(result_dict['url'], self.scrape.url)
         self.assertEqual(result_dict['title'], self.scrape.title)
         self.assertEqual(result_dict['author'], self.scrape.author)
         self.assertEqual(result_dict['publish_date'], self.scrape.publish_date.strftime("%Y-%m-%d %H:%M:%S"))
     
-    def test_to_json_encodes_occupation_data(self):
+    def test_to_json_serializable_obj_encodes_occupation_data(self):
         occupation_data = OccupationData(
             'My Occuptation', 
             'An Industry', 
             'Saskatoon Sk', 
             [
-                ('label', '123', 'some text'),
-                ('more labels', '456', 'some more text'),
+                ['label', '123', 'some text'],
+                ['more labels', '456', 'some more text'],
             ]
         )
         self.scrape.occupation_data = occupation_data
 
-        result = self.scrape.to_json()
-        result_dict = json.loads(result)
+        result_dict = self.scrape.to_json_serializable_obj()
         self.assertEqual(result_dict['occupation_data']['occupation'], occupation_data.occupation)
         self.assertEqual(result_dict['occupation_data']['industry'], occupation_data.industry)
         self.assertEqual(result_dict['occupation_data']['location'], occupation_data.location)
         self.assertListEqual(result_dict['occupation_data']['extras'], [list(tup) for tup in occupation_data.extras])
 
-    def test_to_json_encodes_expense_data(self):
+    def test_to_json_serializable_obj_encodes_expense_data(self):
         expense_data = ExpensesData(
             [
-                ('label', '123', 'some text'),
-                ('more labels', '456', 'some more text'),
-                ('some more labels', '789', 'lots more text'),
+                ['label', '123', 'some text'],
+                ['more labels', '456', 'some more text'],
+                ['some more labels', '789', 'lots more text'],
             ]
         )
         self.scrape.expense_data = expense_data
 
-        result = self.scrape.to_json()
-        result_dict = json.loads(result)
+        result_dict = self.scrape.to_json_serializable_obj()
         self.assertListEqual(result_dict['expense_data']['expenses'], [list(tup) for tup in expense_data.expenses])
     
-    def test_to_json_encodes_days_data(self):
+    def test_to_json_serializable_obj_encodes_days_data(self):
         days = [
             Day(
                 'Day 1',
@@ -124,8 +121,7 @@ class MoneyDiariesPageScraperToJsonTest(unittest.TestCase):
         ]
         self.scrape.days_data = days
 
-        result = self.scrape.to_json()
-        result_dict = json.loads(result)
+        result_dict = self.scrape.to_json_serializable_obj()
         self.assertListEqual(
             result_dict['days_data'], [
                 {'title': days[0].title, 'total': days[0].total, 'time_entries': [

@@ -21,6 +21,10 @@ class MoneyDiariesPageScraper(PageScraper):
         self.occupation_data = None
         self.expense_data = None
         self.days_data = None
+        self.properties_to_not_encode = [
+            'use_selenium', 'content', 'soup', 'driver', 'selenium_driver', 'selenium_wait_until',
+            'properties_to_not_encode'
+        ]
         PageScraper.__init__(
             self,
             url,
@@ -344,30 +348,3 @@ class MoneyDiariesPageScraper(PageScraper):
         for empty_strong in empty_strongs:
             if empty_strong.text.strip() in ['', '~']:
                 empty_strong.decompose()
-
-    def to_json(self):
-        """ Serializes this object to JSON """
-        def serialize(o):
-            if isinstance(o, dict):
-                return {'key': serialize(value) for key, value in o.items()} 
-            elif isinstance(o, list):
-                return [serialize(value) for value in o]
-            elif isinstance(o, datetime):
-                return o.strftime("%Y-%m-%d %H:%M:%S")
-            elif o is None:
-                return None
-            elif isinstance(o, (str, int, float, complex)):
-                return o
-            else:
-                try:
-                    o_dict = o.__dict__
-                except:
-                    return o
-                else:
-                    return {key: serialize(value) for key, value in o_dict.items()}
-
-
-        return json.dumps(
-                self, 
-                default=serialize
-            )

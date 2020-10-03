@@ -13,11 +13,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'scraper'))
-
-from money_diaries_page_scraper import MoneyDiariesPageScraper
-from money_diaries_site_map_scraper import MoneyDiariesSiteMapScaper
+from scraper.money_diaries_page_scraper import MoneyDiariesPageScraper
+from scraper.money_diaries_site_map_scraper import MoneyDiariesSiteMapScaper
 
 CONTENT_LOCATION = './money-diaries/data/pages'
 
@@ -186,4 +183,4 @@ def money_diaries_site_map_scrape(
 
 
 if __name__ == '__main__':
-    money_diaries_site_map_scrape(False, False, True)
+    money_diaries_site_map_scrape(False, False, False)

@@ -9,14 +9,21 @@ import re
 
 from bs4 import BeautifulSoup
 
-from scraper import PageScraper
-from money_diaries_model import PageMetaData, OccupationData, ExpensesData, TimeEntry, Day
+from scraper.scraper import PageScraper
+from scraper.money_diaries_model import PageMetaData, OccupationData, ExpensesData, TimeEntry, Day
 
 
 class MoneyDiariesPageScraper(PageScraper):
     """ Scrape a Money Diaries page """
     def __init__(self, url, selenium_driver=None, selenium_wait_until=None, content_location='./data'):
         """ Initiate the class """
+        PageScraper.__init__(
+            self,
+            url,
+            selenium_driver=selenium_driver,
+            selenium_wait_until=selenium_wait_until,
+            content_location=content_location
+        )
         self.page_meta_data = None
         self.occupation_data = None
         self.expense_data = None
@@ -25,13 +32,6 @@ class MoneyDiariesPageScraper(PageScraper):
             'use_selenium', 'content', 'soup', 'driver', 'selenium_driver', 'selenium_wait_until',
             'properties_to_not_encode'
         ]
-        PageScraper.__init__(
-            self,
-            url,
-            selenium_driver=selenium_driver,
-            selenium_wait_until=selenium_wait_until,
-            content_location=content_location
-        )
 
     def scrape_page(self, write_contents_to_file=False):
         """ Scrapes page and sets content and parse it using Beautiful Soup """

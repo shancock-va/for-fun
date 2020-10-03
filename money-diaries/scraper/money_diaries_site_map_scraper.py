@@ -3,19 +3,19 @@ Classes used for scraping money diaries site map
 """
 import re
 
-from scraper import PageScraper
+from scraper.scraper import PageScraper
 
 class MoneyDiariesSiteMapScaper(PageScraper):
     """ Scrape a Money Diaries page """
     def __init__(self, url, use_selenium=False):
         """ Initiate the class """
+        PageScraper.__init__(self, url, use_selenium)
         self.additional_site_map_urls = []
         self.page_urls = []
         self.properties_to_not_encode = [
             'use_selenium', 'content', 'soup', 'driver', 'selenium_driver', 'selenium_wait_until',
             'properties_to_not_encode', 'page_urls', 'additional_site_map_urls', 'content_location'
         ]
-        PageScraper.__init__(self, url, use_selenium)
 
     def scrape_page(self):
         """ Scrapes page and sets content and parse it using Beautiful Soup """
@@ -42,12 +42,12 @@ class MoneyDiariesSiteMapScaper(PageScraper):
                 for loc in url_section.find_all('loc')
         ]
 
-    def money_diary_page_urls(self):
+    def get_money_diary_page_urls(self):
         """ Get and set expense data of the article """
         return [url for url in self.page_urls if re.search(r'money-diar((?:y)|(?:ies))', url)]
     
     def to_json_serializable_obj(self):
         """ Creates a JSON serializable object """
         obj = PageScraper.to_json_serializable_obj(self)
-        obj['money_diary_page_urls'] = self.money_diary_page_urls()
+        obj['money_diary_page_urls'] = self.get_money_diary_page_urls()
         return obj

@@ -12,7 +12,7 @@ import lxml
 from selenium.webdriver.support.ui import WebDriverWait
 
 
-from money_diaries_model import PageMetaData, OccupationData, ExpensesData, TimeEntry, Day
+from scraper.money_diaries_model import PageMetaData, OccupationData, ExpensesData, TimeEntry, Day
 
 class PageScraper:
     """ Scrape a page """
@@ -27,7 +27,7 @@ class PageScraper:
         self.content_location = content_location
         self.driver = selenium_driver
         self.selenium_wait_until = selenium_wait_until
-        self.properties_to_not_encode = [] if not self.properties_to_not_encode else self.properties_to_not_encode
+        self.properties_to_not_encode = []
 
     def _get_page_contents(self):
         """ Get the page contents """

@@ -5,10 +5,8 @@ import sys
 import unittest
 from unittest import mock
 
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'scraper'))
-
-from money_diaries_page_scraper import MoneyDiariesPageScraper
-from money_diaries_model import OccupationData, ExpensesData, TimeEntry, Day
+from scraper.money_diaries_page_scraper import MoneyDiariesPageScraper
+from scraper.money_diaries_model import OccupationData, ExpensesData, TimeEntry, Day
 
 
 class ScrapeGetTimeFromStringTest(unittest.TestCase):
@@ -172,7 +170,6 @@ class MoneyDiariesPageScraperToDictTest(unittest.TestCase):
                 ]}
             ]
         )
-    
 
 if __name__ == '__main__':
     unittest.main()

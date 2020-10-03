@@ -7,8 +7,8 @@ from selenium.webdriver.support import expected_conditions as EC
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'scraper'))
 
-from money_diaries_page_scraper import MoneyDiariesPageScraper
-from money_diaries_site_map_scraper import MoneyDiariesSiteMapScaper
+from scraper.money_diaries_page_scraper import MoneyDiariesPageScraper
+from scraper.money_diaries_site_map_scraper import MoneyDiariesSiteMapScaper
 
 def main():
     money_diaries_page_scrape()

@@ -16,7 +16,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from scraper.money_diaries_page_scraper import MoneyDiariesPageScraper
 from scraper.money_diaries_site_map_scraper import MoneyDiariesSiteMapScaper
 
-CONTENT_LOCATION = './money-diaries/data/pages'
+PAGE_LOCATION = './data/pages'
+JSON_LOCATION = './data/json'
 
 
 def site_map_worker(sitemaps_queue, sitemaps_scraped_queue, thread_number):
@@ -56,7 +57,7 @@ def page_worker(url_queue, scraped_sites_queue, thread_number):
                             url,
                             selenium_driver=driver,
                             selenium_wait_until=EC.visibility_of_element_located((By.CSS_SELECTOR, "div.byline.modified a")),
-                            content_location=CONTENT_LOCATION
+                            content_location=PAGE_LOCATION
                         )
             try:
                 scraper.scrape_page(write_contents_to_file=True)
@@ -113,7 +114,7 @@ def run_diaries_scraper(threads, url_queue):
     print("Urls scraped %s " % len(list(scraped_sites_queue.queue)))
     scraped_sites = list(scraped_sites_queue.queue)
     
-    file_location = f"{CONTENT_LOCATION}/money_diaries-results.json"
+    file_location = f"{JSON_LOCATION}/money_diaries-results.json"
     write_data_to_json_file(
         json.dumps([site.to_json_serializable_obj() for site in scraped_sites]),
         file_location
@@ -138,12 +139,13 @@ def money_diaries_site_map_scrape(
     start_time = time.time()
 
     try:
-        os.makedirs(CONTENT_LOCATION)
+        os.makedirs(PAGE_LOCATION)
+        os.makedirs(JSON_LOCATION)
     except FileExistsError:
         pass
 
     url_queue = Queue()
-    site_map_location = f"{CONTENT_LOCATION}/site_map-results.json"
+    site_map_location = f"{JSON_LOCATION}/site_map-results.json"
 
     if scrape_site_maps:
         site_maps_queue = Queue()
